@@ -1,0 +1,21 @@
+
+# macOS
+.DS_Store
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Test/cache artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+__pycache__/
+*.py[cod]
+*$py.class
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
