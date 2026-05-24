@@ -12,7 +12,19 @@ from atlas_posthoc.diagnostics.total_variation import (
     max_average_pairwise_tv,
 )
 
+from atlas_posthoc.diagnostics.rhat import (
+    RHatError,
+    RHatRankRow,
+    RHatSummary,
+    classic_r_hat,
+    gelman_rubin_by_rank,
+    rank_interpretation,
+    rank_normalized_split_r_hat,
+    summarize_gelman_rubin_by_rank,
+)
+
 __all__ = [
+    # total_variation
     "PairwiseTVResult",
     "TVConvergenceResult",
     "TVSnapshotResult",
@@ -24,4 +36,14 @@ __all__ = [
     "make_histogram_bins",
     "make_vote_share_bins",
     "max_average_pairwise_tv",
+
+    # rhat
+    "RHatError",
+    "RHatRankRow",
+    "RHatSummary",
+    "classic_r_hat",
+    "gelman_rubin_by_rank",
+    "rank_interpretation",
+    "rank_normalized_split_r_hat",
+    "summarize_gelman_rubin_by_rank",
 ]
