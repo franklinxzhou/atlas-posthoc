@@ -30,6 +30,22 @@ from atlas_posthoc.io.graph_reader import (
     sum_numeric_node_column,
 )
 
+from atlas_posthoc.io.cache import (
+    CacheError,
+    CacheManifest,
+    ensure_dir,
+    load_pipeline_observable_cache,
+    make_json_serializable,
+    observable_runs_to_long_frame,
+    read_chain_metadata,
+    read_json,
+    read_observable_runs,
+    write_chain_metadata,
+    write_json,
+    write_observable_runs,
+    write_pipeline_cache,
+)
+
 __all__ = [
     # Atlas reader
     "AtlasHeader",
@@ -60,4 +76,19 @@ __all__ = [
     "read_graph_nodes",
     "require_node_columns",
     "sum_numeric_node_column",
+
+    # cache
+    "CacheError",
+    "CacheManifest",
+    "ensure_dir",
+    "load_pipeline_observable_cache",
+    "make_json_serializable",
+    "observable_runs_to_long_frame",
+    "read_chain_metadata",
+    "read_json",
+    "read_observable_runs",
+    "write_chain_metadata",
+    "write_json",
+    "write_observable_runs",
+    "write_pipeline_cache",
 ]
