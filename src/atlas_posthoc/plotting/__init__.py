@@ -37,6 +37,16 @@ from atlas_posthoc.plotting.convergence import (
     plot_vote_share_tv_convergence,
 )
 
+from atlas_posthoc.plotting.maps import (
+    MapPlotError,
+    assign_small_units,
+    assign_small_units_to_reference_plan,
+    make_oh_enacted_congressional_map,
+    make_reference_plan_map,
+    plot_reference_plan_map,
+    validate_geometry,
+)
+
 __all__ = [
     # style
     "MANUSCRIPT_STYLE",
@@ -73,4 +83,7 @@ __all__ = [
     "plot_tv_convergence",
     "plot_vote_share_rhat",
     "plot_vote_share_tv_convergence",
+
+    # maps
+    "assign_small_units",
 ]
