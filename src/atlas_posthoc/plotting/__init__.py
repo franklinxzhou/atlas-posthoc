@@ -25,6 +25,18 @@ from atlas_posthoc.plotting.marginals import (
     plot_vote_share_marginals,
 )
 
+from atlas_posthoc.plotting.convergence import (
+    ConvergencePlotError,
+    PowerLawFit,
+    fit_power_law_decay,
+    plot_compactness_rhat,
+    plot_compactness_tv_convergence,
+    plot_rankwise_rhat,
+    plot_tv_convergence,
+    plot_vote_share_rhat,
+    plot_vote_share_tv_convergence,
+)
+
 __all__ = [
     # style
     "MANUSCRIPT_STYLE",
@@ -50,4 +62,15 @@ __all__ = [
     "plot_compactness_marginals",
     "plot_ordered_marginals_by_chain",
     "plot_vote_share_marginals",
+
+    # convergence
+    "ConvergencePlotError",
+    "PowerLawFit",
+    "fit_power_law_decay",
+    "plot_compactness_rhat",
+    "plot_compactness_tv_convergence",
+    "plot_rankwise_rhat",
+    "plot_tv_convergence",
+    "plot_vote_share_rhat",
+    "plot_vote_share_tv_convergence",
 ]
