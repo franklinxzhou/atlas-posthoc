@@ -66,12 +66,26 @@ def test_rank_normalized_split_r_hat_is_finite():
     assert rhat > 0
 
 
-def test_rank_interpretation():
-    assert rank_interpretation(1, 15) == "most Republican"
-    assert rank_interpretation(2, 15) == "2nd most Republican"
-    assert rank_interpretation(3, 15) == "3rd most Republican"
-    assert rank_interpretation(4, 15) == "4th most Republican"
-    assert rank_interpretation(15, 15) == "least Republican"
+def test_rank_interpretation_vote_share():
+    assert rank_interpretation(1, 15, rank_type="vote_share") == "most Republican"
+    assert rank_interpretation(2, 15, rank_type="vote_share") == "2nd most Republican"
+    assert rank_interpretation(3, 15, rank_type="vote_share") == "3rd most Republican"
+    assert rank_interpretation(4, 15, rank_type="vote_share") == "4th most Republican"
+    assert rank_interpretation(15, 15, rank_type="vote_share") == "least Republican"
+
+def test_rank_interpretation_compactness():
+    assert (
+        rank_interpretation(1, 15, rank_type="compactness")
+        == "most compact / lowest score"
+    )
+    assert (
+        rank_interpretation(2, 15, rank_type="compactness")
+        == "2nd lowest compactness score"
+    )
+    assert (
+        rank_interpretation(15, 15, rank_type="compactness")
+        == "least compact / highest score"
+    )
 
 
 def test_gelman_rubin_by_rank_list_input():

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from statistics import NormalDist
-from typing import Any, Mapping, Sequence
+from typing import Any, Literal, Mapping, Sequence
 
 import numpy as np
 
+RankType = Literal["vote_share", "compactness", "generic"]
 
 class RHatError(Exception):
     """Base exception for Gelman-Rubin / R-hat diagnostics."""
@@ -176,19 +177,7 @@ def _normalize_runs(
     return chain_ids, runs
 
 
-def rank_interpretation(rank: int, num_ranks: int) -> str:
-    """
-    Human-readable interpretation for ordered election-vector ranks.
-
-    Rank 1 is the most Republican district. The final rank is the least
-    Republican / most Democratic district.
-    """
-    if rank == 1:
-        return "most Republican"
-
-    if rank == num_ranks:
-        return "least Republican"
-
+def _ordinal(rank: int) -> str:
     suffix = "th"
     if rank % 10 == 1 and rank % 100 != 11:
         suffix = "st"
@@ -197,11 +186,59 @@ def rank_interpretation(rank: int, num_ranks: int) -> str:
     elif rank % 10 == 3 and rank % 100 != 13:
         suffix = "rd"
 
-    return f"{rank}{suffix} most Republican"
+    return f"{rank}{suffix}"
 
+
+def rank_interpretation(
+    rank: int,
+    num_ranks: int,
+    *,
+    rank_type: RankType = "vote_share",
+    compactness_lower_is_better: bool = True,
+) -> str:
+    """
+    Human-readable interpretation for ordered rank observables.
+
+    For vote share, ranks are sorted ascending Democratic vote share:
+        rank 1 = most Republican
+        final rank = least Republican / most Democratic
+
+    For compactness, ranks are sorted ascending compactness score by default.
+    If lower compactness score is better, then:
+        rank 1 = most compact / lowest score
+        final rank = least compact / highest score
+    """
+    if rank_type == "vote_share":
+        if rank == 1:
+            return "most Republican"
+        if rank == num_ranks:
+            return "least Republican"
+        return f"{_ordinal(rank)} most Republican"
+
+    if rank_type == "compactness":
+        if compactness_lower_is_better:
+            if rank == 1:
+                return "most compact / lowest score"
+            if rank == num_ranks:
+                return "least compact / highest score"
+            return f"{_ordinal(rank)} lowest compactness score"
+        else:
+            if rank == 1:
+                return "least compact / lowest score"
+            if rank == num_ranks:
+                return "most compact / highest score"
+            return f"{_ordinal(rank)} lowest compactness score"
+
+    if rank_type == "generic":
+        return f"rank {rank}"
+
+    raise ValueError(f"unknown rank_type: {rank_type!r}")
 
 def gelman_rubin_by_rank(
     runs_list: Sequence[Any] | Mapping[str, Any],
+    *,
+    rank_type: RankType = "vote_share",
+    compactness_lower_is_better: bool = True,
 ) -> tuple[list[dict[str, Any]], int, int]:
     """
     Compute both R-hat diagnostics for each rank of the sorted election vector.
@@ -255,7 +292,12 @@ def gelman_rubin_by_rank(
         rows.append(
             {
                 "rank": rank,
-                "interpretation": rank_interpretation(rank, num_ranks),
+                "interpretation": rank_interpretation(
+                    rank,
+                    num_ranks,
+                    rank_type=rank_type,
+                    compactness_lower_is_better=compactness_lower_is_better,
+                ),
                 "classic_r_hat": classic_r_hat(chains),
                 "rank_normalized_split_r_hat": rank_normalized_split_r_hat(chains),
             }
@@ -266,13 +308,20 @@ def gelman_rubin_by_rank(
 
 def summarize_gelman_rubin_by_rank(
     runs_list: Sequence[Any] | Mapping[str, Any],
+    *,
+    rank_type: RankType = "vote_share",
+    compactness_lower_is_better: bool = True,
 ) -> RHatSummary:
     """
     Richer wrapper around `gelman_rubin_by_rank`.
 
     Useful for reports and convergence gates.
     """
-    rows, min_draws, num_ranks = gelman_rubin_by_rank(runs_list)
+    rows, min_draws, num_ranks = gelman_rubin_by_rank(
+        runs_list,
+        rank_type=rank_type,
+        compactness_lower_is_better=compactness_lower_is_better,
+    )
 
     finite_classic = [
         row["classic_r_hat"]
