@@ -170,7 +170,7 @@ def main() -> None:
         obs.vote_runs,
         title="Ordered vote-share marginals by chain",
         y_limits=(0.20, 0.82),
-        output_path="outputs/figures/oh_vote_share_marginals.png",
+        output_path=FIGURE_DIR / "oh_vote_share_marginals.png",
     )
     plt.close(fig)
 
@@ -178,7 +178,7 @@ def main() -> None:
         obs.compactness_runs,
         title="Ordered compactness marginals by chain",
         y_limits=(15, 55),
-        output_path="outputs/figures/oh_compactness_marginals.png",
+        output_path=FIGURE_DIR / "oh_compactness_marginals.png",
     )
     plt.close(fig)
 
