@@ -14,7 +14,24 @@ from atlas_posthoc.audit.enacted import (
     ordered_compactness_from_totals,
 )
 
+from atlas_posthoc.audit.percentiles import (
+    PercentileAuditError,
+    PercentileMethod,
+    ReferencePercentileResult,
+    ReferencePercentileRow,
+    compare_compactness_reference_to_ensemble,
+    compare_enacted_compactness_to_ensemble,
+    compare_enacted_to_ensemble,
+    compare_enacted_vote_share_to_ensemble,
+    compare_reference_to_ensemble,
+    compare_vote_share_reference_to_ensemble,
+    empirical_percentile,
+    empirical_tail_probabilities,
+    pooled_rank_samples,
+)
+
 __all__ = [
+    # enacted
     "DistrictCompactnessTotals",
     "EnactedAuditError",
     "ReferenceAuditResult",
@@ -28,4 +45,19 @@ __all__ = [
     "compute_reference_vote_share",
     "node_to_district_from_column",
     "ordered_compactness_from_totals",
+
+    # percentiles
+    "PercentileAuditError",
+    "PercentileMethod",
+    "ReferencePercentileResult",
+    "ReferencePercentileRow",
+    "compare_compactness_reference_to_ensemble",
+    "compare_enacted_compactness_to_ensemble",
+    "compare_enacted_to_ensemble",
+    "compare_enacted_vote_share_to_ensemble",
+    "compare_reference_to_ensemble",
+    "compare_vote_share_reference_to_ensemble",
+    "empirical_percentile",
+    "empirical_tail_probabilities",
+    "pooled_rank_samples",
 ]
