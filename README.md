@@ -1,3 +1,5 @@
+[![Test CI](https://github.com/franklinxzhou/atlas-posthoc/actions/workflows/test-ci.yml/badge.svg)](https://github.com/franklinxzhou/atlas-posthoc/actions/workflows/test-ci.yml)
+
 # atlas-posthoc
 Post-hoc diagnostics and manuscript-quality plotting for multi-chain `AtlasIO.jl` redistricting outputs.
 
