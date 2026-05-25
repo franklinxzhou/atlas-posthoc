@@ -461,6 +461,230 @@ def plot_ordered_marginals_by_chain(
 
     return fig, ax
 
+def _apply_ordered_marginal_axes(
+    ax: Any,
+    arrays: Sequence[np.ndarray],
+    *,
+    observable_kind: ObservableKind,
+    reference_values: Sequence[float] | None,
+    rank_positions: np.ndarray,
+    title: str | None,
+    xlabel: str,
+    ylabel: str,
+    y_limits: tuple[float, float] | None,
+    percent_axis: bool,
+    force_vote_share_bounds: bool,
+) -> None:
+    ax.set_xticks(rank_positions)
+    ax.set_xticklabels([str(i) for i in range(1, len(rank_positions) + 1)])
+    ax.set_xlim(0.5, len(rank_positions) + 0.5)
+
+    if y_limits is not None:
+        ax.set_ylim(*y_limits)
+    elif observable_kind == "vote_share" and force_vote_share_bounds:
+        add_zero_one_bounds(ax, axis="y", lower=0.0, upper=1.0)
+    else:
+        all_values = np.concatenate([arr.ravel() for arr in arrays])
+        all_values = all_values[np.isfinite(all_values)]
+
+        if reference_values is not None:
+            ref = np.asarray(reference_values, dtype=float)
+            ref = ref[np.isfinite(ref)]
+            if ref.size > 0:
+                all_values = np.concatenate([all_values, ref])
+
+        if all_values.size > 0:
+            ymin = float(np.min(all_values))
+            ymax = float(np.max(all_values))
+            pad = max(0.05 * (ymax - ymin), 1e-4)
+            ax.set_ylim(ymin - pad, ymax + pad)
+
+    if percent_axis:
+        format_percent_axis(ax, axis="y")
+
+    apply_axis_labels(ax, title=title, xlabel=xlabel, ylabel=ylabel)
+    despine(ax)
+
+def plot_ordered_boxplots_by_chain(
+    runs: Sequence[Any] | Mapping[str, Any],
+    *,
+    chain_ids: Sequence[str] | None = None,
+    observable_kind: ObservableKind = "generic",
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    style: PlotStyleName | PlotStyle = "manuscript",
+    reference_values: Sequence[float] | None = None,
+    reference_label: str = "Enacted plan",
+    reference_color: str = "red",
+    percent_axis: bool | None = None,
+    y_limits: tuple[float, float] | None = None,
+    force_vote_share_bounds: bool = False,
+    box_width: float = 0.10,
+    rank_gap: float = 1.0,
+    showfliers: bool = False,
+    showmeans: bool = True,
+    show_legend: bool = True,
+    legend_loc: str = "upper left",
+    ax: Any | None = None,
+    output_path: str | Path | None = None,
+) -> tuple[Any, Any]:
+    """
+    Plot ordered rank-wise boxplots by chain.
+
+    This is the boxplot companion to `plot_ordered_marginals_by_chain`.
+    Each chain gets a side-by-side boxplot at each ordered district rank.
+    """
+    ids, arrays = _normalize_runs(runs, chain_ids=chain_ids)
+    s = get_plot_style(style)
+
+    n_chains = len(arrays)
+    n_ranks = arrays[0].shape[1]
+
+    if reference_values is not None and len(reference_values) != n_ranks:
+        raise MarginalPlotError(
+            f"reference_values has length {len(reference_values)}, expected {n_ranks}"
+        )
+
+    if percent_axis is None:
+        percent_axis = observable_kind == "vote_share"
+
+    if xlabel is None or ylabel is None:
+        default_xlabel, default_ylabel = _default_labels(observable_kind)
+        xlabel = xlabel or default_xlabel
+        ylabel = ylabel or default_ylabel
+
+    if ax is None:
+        with plot_style(s):
+            fig, ax = plt.subplots(figsize=s.figsize_wide)
+    else:
+        fig = ax.figure
+
+    colors = chain_color_cycle()
+    if n_chains > len(colors):
+        raise MarginalPlotError(
+            f"too many chains ({n_chains}); default color cycle supports {len(colors)}"
+        )
+
+    if n_chains == 1:
+        offsets = np.array([0.0])
+    else:
+        offsets = np.linspace(-0.18, 0.18, n_chains)
+
+    rank_positions = np.arange(1, n_ranks + 1, dtype=float) * rank_gap
+
+    for chain_idx, (chain_id, arr) in enumerate(zip(ids, arrays)):
+        data_by_rank = []
+        positions = []
+
+        for rank_idx in range(n_ranks):
+            data = arr[:, rank_idx]
+            data = data[np.isfinite(data)]
+
+            if data.size == 0:
+                continue
+
+            data_by_rank.append(data)
+            positions.append(rank_positions[rank_idx] + offsets[chain_idx])
+
+        if not data_by_rank:
+            continue
+
+        bp = ax.boxplot(
+            data_by_rank,
+            positions=positions,
+            widths=box_width,
+            patch_artist=True,
+            showfliers=showfliers,
+            showmeans=showmeans,
+            manage_ticks=False,
+            medianprops={
+                "color": "black",
+                "linewidth": 1.0,
+            },
+            meanprops={
+                "marker": "o",
+                "markerfacecolor": "black",
+                "markeredgecolor": "black",
+                "markersize": 3,
+            },
+            boxprops={
+                "linewidth": 0.8,
+                "edgecolor": "black",
+            },
+            whiskerprops={
+                "linewidth": 0.8,
+                "color": "black",
+            },
+            capprops={
+                "linewidth": 0.8,
+                "color": "black",
+            },
+        )
+
+        for patch in bp["boxes"]:
+            patch.set_facecolor(colors[chain_idx])
+            patch.set_alpha(0.60)
+
+    if reference_values is not None:
+        ref = np.asarray(reference_values, dtype=float)
+        ax.scatter(
+            rank_positions,
+            ref,
+            color=reference_color,
+            s=28,
+            label=reference_label,
+            zorder=4,
+        )
+
+    if show_legend:
+        from matplotlib.patches import Patch
+
+        handles = [
+            Patch(
+                facecolor=colors[i],
+                edgecolor="black",
+                label=ids[i],
+                alpha=0.60,
+            )
+            for i in range(n_chains)
+        ]
+
+        if reference_values is not None:
+            from matplotlib.lines import Line2D
+
+            handles.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    linestyle="None",
+                    color=reference_color,
+                    label=reference_label,
+                )
+            )
+
+        ax.legend(handles=handles, loc=legend_loc, frameon=True, fancybox=False)
+
+    _apply_ordered_marginal_axes(
+        ax,
+        arrays,
+        observable_kind=observable_kind,
+        reference_values=reference_values,
+        rank_positions=rank_positions,
+        title=title,
+        xlabel=xlabel,
+        ylabel=ylabel,
+        y_limits=y_limits,
+        percent_axis=percent_axis,
+        force_vote_share_bounds=force_vote_share_bounds,
+    )
+
+    if output_path is not None:
+        save_figure(fig, output_path, close=False)
+
+    return fig, ax
+
 
 def plot_vote_share_marginals(
     runs: Sequence[Any] | Mapping[str, Any],
@@ -489,6 +713,36 @@ def plot_vote_share_marginals(
         output_path=output_path,
     )
 
+def plot_vote_share_boxplots(
+    runs: Sequence[Any] | Mapping[str, Any],
+    *,
+    chain_ids: Sequence[str] | None = None,
+    reference_values: Sequence[float] | None = None,
+    reference_label: str = "Enacted plan",
+    style: PlotStyleName | PlotStyle = "manuscript",
+    title: str | None = None,
+    y_limits: tuple[float, float] | None = None,
+    force_vote_share_bounds: bool = False,
+    ax: Any | None = None,
+    output_path: str | Path | None = None,
+) -> tuple[Any, Any]:
+    """
+    Convenience wrapper for ordered vote-share boxplots.
+    """
+    return plot_ordered_boxplots_by_chain(
+        runs,
+        chain_ids=chain_ids,
+        observable_kind="vote_share",
+        title=title,
+        style=style,
+        reference_values=reference_values,
+        reference_label=reference_label,
+        y_limits=y_limits,
+        force_vote_share_bounds=force_vote_share_bounds,
+        ax=ax,
+        output_path=output_path,
+    )
+
 
 def plot_compactness_marginals(
     runs: Sequence[Any] | Mapping[str, Any],
@@ -503,6 +757,35 @@ def plot_compactness_marginals(
     output_path: str | Path | None = None,
 ) -> tuple[Any, Any]:
     return plot_ordered_marginals_by_chain(
+        runs,
+        chain_ids=chain_ids,
+        observable_kind="compactness",
+        title=title,
+        style=style,
+        reference_values=reference_values,
+        reference_label=reference_label,
+        y_limits=y_limits,
+        ax=ax,
+        output_path=output_path,
+    )
+
+
+def plot_compactness_boxplots(
+    runs: Sequence[Any] | Mapping[str, Any],
+    *,
+    chain_ids: Sequence[str] | None = None,
+    reference_values: Sequence[float] | None = None,
+    reference_label: str = "Enacted plan",
+    style: PlotStyleName | PlotStyle = "manuscript",
+    title: str | None = None,
+    y_limits: tuple[float, float] | None = None,
+    ax: Any | None = None,
+    output_path: str | Path | None = None,
+) -> tuple[Any, Any]:
+    """
+    Convenience wrapper for ordered compactness boxplots.
+    """
+    return plot_ordered_boxplots_by_chain(
         runs,
         chain_ids=chain_ids,
         observable_kind="compactness",

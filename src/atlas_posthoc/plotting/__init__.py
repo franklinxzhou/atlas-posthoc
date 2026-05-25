@@ -20,11 +20,13 @@ from atlas_posthoc.plotting.style import (
 
 from atlas_posthoc.plotting.marginals import (
     MarginalPlotError,
+    plot_compactness_boxplots,
     plot_compactness_marginals,
+    plot_ordered_boxplots_by_chain,
     plot_ordered_marginals_by_chain,
+    plot_vote_share_boxplots,
     plot_vote_share_marginals,
 )
-
 from atlas_posthoc.plotting.convergence import (
     ConvergencePlotError,
     PowerLawFit,
@@ -72,6 +74,9 @@ __all__ = [
     "plot_compactness_marginals",
     "plot_ordered_marginals_by_chain",
     "plot_vote_share_marginals",
+    "plot_compactness_boxplots",
+    "plot_ordered_boxplots_by_chain",
+    "plot_vote_share_boxplots",
 
     # convergence
     "ConvergencePlotError",

@@ -7,6 +7,12 @@ from atlas_posthoc.plotting.marginals import (
     plot_vote_share_marginals,
 )
 
+from atlas_posthoc.plotting.marginals import (
+    plot_compactness_boxplots,
+    plot_ordered_boxplots_by_chain,
+    plot_vote_share_boxplots,
+)
+
 
 def make_vote_runs():
     return {
@@ -83,6 +89,55 @@ def test_plot_ordered_marginals_by_chain_generic(tmp_path):
     }
 
     fig, ax = plot_ordered_marginals_by_chain(
+        runs,
+        observable_kind="generic",
+        xlabel="Rank",
+        ylabel="Value",
+        output_path=out,
+    )
+
+    assert out.exists()
+    assert ax.get_xlabel() == "Rank"
+    assert ax.get_ylabel() == "Value"
+    plt.close(fig)
+
+def test_plot_vote_share_boxplots(tmp_path):
+    out = tmp_path / "vote_boxplots.png"
+
+    fig, ax = plot_vote_share_boxplots(
+        make_vote_runs(),
+        reference_values=[0.51, 0.575, 0.605],
+        output_path=out,
+    )
+
+    assert out.exists()
+    assert len(ax.get_xticks()) == 3
+    plt.close(fig)
+
+
+def test_plot_compactness_boxplots(tmp_path):
+    out = tmp_path / "compactness_boxplots.png"
+
+    fig, ax = plot_compactness_boxplots(
+        make_compactness_runs(),
+        reference_values=[29.5, 35.2, 41.5],
+        output_path=out,
+    )
+
+    assert out.exists()
+    assert len(ax.get_xticks()) == 3
+    plt.close(fig)
+
+
+def test_plot_ordered_boxplots_by_chain_generic(tmp_path):
+    out = tmp_path / "generic_boxplots.png"
+
+    runs = {
+        "Run 1": np.array([[1.0, 2.0], [1.1, 2.1], [0.9, 1.9]]),
+        "Run 2": np.array([[0.8, 1.8], [0.85, 1.85], [0.9, 1.9]]),
+    }
+
+    fig, ax = plot_ordered_boxplots_by_chain(
         runs,
         observable_kind="generic",
         xlabel="Rank",
