@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Literal, Mapping, Sequence
 
 import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
 import numpy as np
 
 from atlas_posthoc.plotting.style import (
@@ -186,47 +187,102 @@ def _default_labels(
 
     return ("Ordered district rank", "Observable value")
 
-
-def _plot_density_at_rank(
+def _plot_half_violin_at_rank(
     ax: Any,
     samples: np.ndarray,
     *,
     x0: float,
-    grid: np.ndarray,
-    width_scale: float,
     color: str,
     alpha: float,
-    line_width: float,
-    bandwidth: float | None = None,
+    width: float = 0.08,
+    line_width: float = 0.8,
+    mean_line_width: float = 1.0,
+    min_pad: float = 1e-4,
 ) -> None:
     """
-    Draw one mirrored density shape centered at x0.
+    Draw one side-by-side half violin at a district rank.
+
+    This intentionally follows the older MFR / CT-style plotting grammar:
+    local KDE support, one-sided density, no full-height violin outline, and
+    a short black mean marker.
     """
-    vals = _finite_values(samples)
+    data = _finite_values(samples)
 
-    if vals.size == 0:
+    if data.size == 0:
         return
 
-    density = _gaussian_kde_1d(vals, grid, bandwidth=bandwidth)
-
-    max_density = density.max()
-    if not np.isfinite(max_density) or max_density <= 0:
+    if data.size < 2 or np.ptp(data) < 1e-12:
+        y0 = float(np.mean(data))
+        ax.plot(
+            [x0, x0 + width * 0.5],
+            [y0, y0],
+            color=color,
+            linewidth=2.0,
+            zorder=3,
+        )
         return
 
-    half_width = width_scale * density / max_density
+    data_range = float(np.ptp(data))
+    pad = max(0.01 * data_range, min_pad)
 
-    x_left = x0 - half_width
-    x_right = x0 + half_width
+    y_vals = np.linspace(
+        float(np.min(data) - pad),
+        float(np.max(data) + pad),
+        160,
+    )
+
+    try:
+        kde = gaussian_kde(data)
+        density = kde(y_vals)
+    except Exception:
+        y0 = float(np.mean(data))
+        ax.plot(
+            [x0, x0 + width * 0.5],
+            [y0, y0],
+            color=color,
+            linewidth=2.0,
+            zorder=3,
+        )
+        return
+
+    if not np.any(np.isfinite(density)) or np.nanmax(density) <= 0:
+        return
+
+    scaled_density = density * (width / np.nanmax(density))
+    x_vals = x0 + scaled_density
 
     ax.fill_betweenx(
-        grid,
-        x_left,
-        x_right,
+        y_vals,
+        x0,
+        x_vals,
         facecolor=color,
-        edgecolor="black",
-        linewidth=line_width,
         alpha=alpha,
+        linewidth=0,
         zorder=2,
+    )
+
+    ax.plot(
+        x_vals,
+        y_vals,
+        color=color,
+        linewidth=line_width,
+        zorder=3,
+    )
+
+    mean_val = float(np.mean(data))
+
+    try:
+        mean_width = float(kde(mean_val)[0] * (width / np.nanmax(density)))
+    except Exception:
+        mean_width = width * 0.5
+
+    ax.hlines(
+        mean_val,
+        x0,
+        x0 + mean_width,
+        color="black",
+        linewidth=mean_line_width,
+        zorder=4,
     )
 
 
@@ -245,14 +301,17 @@ def plot_ordered_marginals_by_chain(
     percent_axis: bool | None = None,
     y_limits: tuple[float, float] | None = None,
     bandwidth: float | None = None,
-    violin_width: float = 0.18,
+    violin_width: float = 0.08,
     rank_gap: float = 1.0,
+    force_vote_share_bounds: bool = False,
     show_legend: bool = True,
     legend_loc: str = "upper left",
     ax: Any | None = None,
     output_path: str | Path | None = None,
 ) -> tuple[Any, Any]:
     """
+    Notice: This function has been overhauled by some old MetropolizedForestRecom plotting aesthetics.
+
     Plot ordered rank-wise marginal densities by chain.
 
     Parameters
@@ -298,21 +357,15 @@ def plot_ordered_marginals_by_chain(
             f"too many chains ({n_chains}); default color cycle supports {len(colors)}"
         )
 
-    grid = _auto_value_grid(
-        arrays,
-        observable_kind=observable_kind,
-        reference_values=reference_values,
-    )
-
-    # offsets for side-by-side density shapes at each rank
+    # Side-by-side offsets matching the old MFR / CT-style half-violin grammar.
     if n_chains == 1:
         offsets = np.array([0.0])
     else:
-        offsets = np.linspace(-0.24, 0.24, n_chains)
+        offsets = np.linspace(-0.15, 0.15, n_chains)
 
     rank_positions = np.arange(1, n_ranks + 1, dtype=float) * rank_gap
 
-    # draw densities
+    # Draw local half violins.
     for rank_idx in range(n_ranks):
         x_rank = rank_positions[rank_idx]
 
@@ -320,16 +373,15 @@ def plot_ordered_marginals_by_chain(
             samples = arr[:, rank_idx]
             x0 = x_rank + offsets[chain_idx]
 
-            _plot_density_at_rank(
+            _plot_half_violin_at_rank(
                 ax,
                 samples,
                 x0=x0,
-                grid=grid,
-                width_scale=violin_width,
                 color=colors[chain_idx],
-                alpha=s.alpha,
+                alpha=0.60,
+                width=violin_width,
                 line_width=0.8,
-                bandwidth=bandwidth,
+                mean_line_width=1.0,
             )
 
     # overlay reference / enacted points
@@ -376,11 +428,27 @@ def plot_ordered_marginals_by_chain(
 
     ax.set_xticks(rank_positions)
     ax.set_xticklabels([str(i) for i in range(1, n_ranks + 1)])
+    ax.set_xlim(0.5, n_ranks + 0.5)
 
     if y_limits is not None:
         ax.set_ylim(*y_limits)
-    elif observable_kind == "vote_share":
+    elif observable_kind == "vote_share" and force_vote_share_bounds:
         add_zero_one_bounds(ax, axis="y", lower=0.0, upper=1.0)
+    else:
+        all_values = np.concatenate([arr.ravel() for arr in arrays])
+        all_values = all_values[np.isfinite(all_values)]
+
+        if reference_values is not None:
+            ref = np.asarray(reference_values, dtype=float)
+            ref = ref[np.isfinite(ref)]
+            if ref.size > 0:
+                all_values = np.concatenate([all_values, ref])
+
+        if all_values.size > 0:
+            ymin = float(np.min(all_values))
+            ymax = float(np.max(all_values))
+            pad = max(0.05 * (ymax - ymin), 1e-4)
+            ax.set_ylim(ymin - pad, ymax + pad)
 
     if percent_axis:
         format_percent_axis(ax, axis="y")
@@ -402,12 +470,11 @@ def plot_vote_share_marginals(
     reference_label: str = "Enacted plan",
     style: PlotStyleName | PlotStyle = "manuscript",
     title: str | None = None,
+    y_limits: tuple[float, float] | None = None,
+    force_vote_share_bounds: bool = False,
     ax: Any | None = None,
     output_path: str | Path | None = None,
 ) -> tuple[Any, Any]:
-    """
-    Convenience wrapper for ordered vote-share marginals.
-    """
     return plot_ordered_marginals_by_chain(
         runs,
         chain_ids=chain_ids,
@@ -416,6 +483,8 @@ def plot_vote_share_marginals(
         style=style,
         reference_values=reference_values,
         reference_label=reference_label,
+        y_limits=y_limits,
+        force_vote_share_bounds=force_vote_share_bounds,
         ax=ax,
         output_path=output_path,
     )
@@ -429,12 +498,10 @@ def plot_compactness_marginals(
     reference_label: str = "Enacted plan",
     style: PlotStyleName | PlotStyle = "manuscript",
     title: str | None = None,
+    y_limits: tuple[float, float] | None = None,
     ax: Any | None = None,
     output_path: str | Path | None = None,
 ) -> tuple[Any, Any]:
-    """
-    Convenience wrapper for ordered compactness marginals.
-    """
     return plot_ordered_marginals_by_chain(
         runs,
         chain_ids=chain_ids,
@@ -443,6 +510,7 @@ def plot_compactness_marginals(
         style=style,
         reference_values=reference_values,
         reference_label=reference_label,
+        y_limits=y_limits,
         ax=ax,
         output_path=output_path,
     )
