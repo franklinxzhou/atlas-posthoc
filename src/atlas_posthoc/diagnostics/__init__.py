@@ -60,6 +60,21 @@ from atlas_posthoc.diagnostics.pace import (
     pace_from_labels,
 )
 
+from atlas_posthoc.diagnostics.pace_clustering import (
+    ClusteringMethod,
+    PACEDistanceClusteringResult,
+    PACEClusteringError,
+    PACEClusteringResult,
+    assign_to_medoids,
+    cluster_distance_matrix,
+    cluster_distance_matrix_by_medoids,
+    cluster_distance_matrix_by_threshold,
+    farthest_first_medoids,
+    pace_from_distance_matrix,
+    pam_refine_medoids,
+    validate_distance_matrix,
+)
+
 __all__ = [
     # total_variation
     "PairwiseTVResult",
@@ -118,4 +133,18 @@ __all__ = [
     "pace_exact_from_chain_states",
     "pace_from_contingency",
     "pace_from_labels",
+
+    # pace_clustering
+    "ClusteringMethod",
+    "PACEDistanceClusteringResult",
+    "PACEClusteringError",
+    "PACEClusteringResult",
+    "assign_to_medoids",
+    "cluster_distance_matrix",
+    "cluster_distance_matrix_by_medoids",
+    "cluster_distance_matrix_by_threshold",
+    "farthest_first_medoids",
+    "pace_from_distance_matrix",
+    "pam_refine_medoids",
+    "validate_distance_matrix",
 ]
