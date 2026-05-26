@@ -68,88 +68,28 @@ cd atlas-posthoc
 uv pip install -e .
 ```
 
-### Create a config file
-Example:
+### Expected outputs
 ```
-project:
-  name: congressional
-  output_dir: outputs/congressional
-
-chains:
-  files:
-    - outputs/chains/congressional/run9.jsonl.gz
-    - outputs/chains/congressional/run10.jsonl.gz
-    - outputs/chains/congressional/run11.jsonl.gz
-    - outputs/chains/congressional/run12.jsonl.gz
-  chain_ids:
-    - run9
-    - run10
-    - run11
-    - run12
-  output_frequency: 10000
-  thin_step: 1
-  skip_bad_lines: true
-
-graph:
-  path: data/graph/pct20.json
-  pop_col: POP20
-  n_districts: 15
-
-election:
-  dem_col: G20PREDEM
-  rep_col: G20PREREP
-  name: 2020 Presidential
-
-compactness:
-  atlas_data_key: get_isoperimetric_scores
-  sort: ascending
-
-diagnostics:
-  vote_share_bin_width: 0.002
-  compactness_bin_width: 0.5
-  tv_prefixes: auto
-
-plots:
-  dpi: 300
-  show_enacted: true
-
-reference_plan:
-  precincts_path: data/derived/pctSF
-  enacted_path: data/raw/cong_adopted_2022
-  district_col: CONG_DIST
-```
-
-### Parse chains
-```
-atlas-posthoc parse configs/congressional.yml
-```
-Expected outputs:
-```
-outputs/ohio_congressional/cache/
-├── parse_summary.json
-├── chain_records.parquet
-└── assignments_long.parquet
-```
-
-### Run the full diagnostic pipeline
-```
-atlas-posthoc run configs/ohio_congressional.yml
-```
-Expected outputs:
-```
-outputs/ohio_congressional/
+outputs/congressional/
 ├── cache/
-│   ├── ordered_vote_shares.parquet
-│   ├── ordered_compactness.parquet
-│   └── tv_by_proposal.parquet
+│   ├── vote_runs.parquet
+│   ├── compactness_runs.parquet
+│   ├── chain_metadata.parquet
+│   └── chain_summaries.json
+├── diagnostics/
+│   ├── vote_tv.json
+│   ├── compactness_tv.json
+│   ├── vote_rhat.json
+│   └── compactness_rhat.json
 ├── figures/
 │   ├── ordered_vote_share_marginals.png
-│   ├── vote_share_tv_convergence.png
 │   ├── ordered_compactness_marginals.png
+│   ├── ordered_vote_share_boxplots.png
+│   ├── ordered_compactness_boxplots.png
+│   ├── vote_share_tv_convergence.png
 │   ├── compactness_tv_convergence.png
-│   └── enacted_map.png
-└── reports/
-    ├── diagnostics_summary.md
-    └── diagnostics_summary.txt
+│   ├── vote_share_rhat.png
+│   └── compactness_rhat.png
+├── diagnostic_report.md
+└── manifest.json
 ```
-
