@@ -40,6 +40,26 @@ from atlas_posthoc.diagnostics.partition_metrics import (
     unit_transfer_distance,
 )
 
+from atlas_posthoc.diagnostics.pace import (
+    PACEBootstrapMode,
+    PACEBootstrapResult,
+    PACECellSummary,
+    PACEError,
+    PACEResult,
+    bootstrap_pace_delta,
+    canonicalize_assignment_state,
+    contingency_table,
+    contingency_table_from_codes,
+    exact_state_labels_from_chain_states,
+    exact_state_labels_from_matrix,
+    normalize_chain_labels,
+    pace_correction_factor,
+    pace_delta_from_contingency,
+    pace_exact_from_chain_states,
+    pace_from_contingency,
+    pace_from_labels,
+)
+
 __all__ = [
     # total_variation
     "PairwiseTVResult",
@@ -79,4 +99,23 @@ __all__ = [
     "transfer_distance_result",
     "unconstrained_transfer_distance",
     "unit_transfer_distance",
+
+    # pace
+    "PACEBootstrapMode",
+    "PACEBootstrapResult",
+    "PACECellSummary",
+    "PACEError",
+    "PACEResult",
+    "bootstrap_pace_delta",
+    "canonicalize_assignment_state",
+    "contingency_table",
+    "contingency_table_from_codes",
+    "exact_state_labels_from_chain_states",
+    "exact_state_labels_from_matrix",
+    "normalize_chain_labels",
+    "pace_correction_factor",
+    "pace_delta_from_contingency",
+    "pace_exact_from_chain_states",
+    "pace_from_contingency",
+    "pace_from_labels",
 ]
