@@ -13,6 +13,8 @@ from atlas_posthoc.reports.summary import (
     statuses_to_markdown,
     tv_summary_to_markdown,
     write_diagnostic_report,
+    pace_status,
+    pace_summary_to_markdown,
 )
 
 __all__ = [
@@ -30,4 +32,6 @@ __all__ = [
     "statuses_to_markdown",
     "tv_summary_to_markdown",
     "write_diagnostic_report",
+    "pace_status",
+    "pace_summary_to_markdown",
 ]

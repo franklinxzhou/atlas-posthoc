@@ -135,12 +135,131 @@ def rhat_maxes(rhat_summary: Any) -> tuple[float | None, float | None]:
     )
 
 
+def _extract_pace_result(pace_like: Any) -> Any:
+    """
+    Accept either:
+      - PACEResult
+      - PACEDistanceClusteringResult, via `.pace`
+      - dict with key "pace"
+      - dict with PACEResult-style fields
+    """
+    if pace_like is None:
+        return None
+
+    if hasattr(pace_like, "pace"):
+        return pace_like.pace
+
+    if isinstance(pace_like, Mapping) and "pace" in pace_like:
+        return pace_like["pace"]
+
+    return pace_like
+
+
+def pace_status(pace_like: Any) -> DiagnosticStatus:
+    """
+    Produce a PASS/WARN/INFO status for a PACE result.
+
+    If bootstrap is available, PACEResult.converged should already reflect the
+    bootstrap upper quantile rule used in diagnostics.pace.
+    """
+    pace = _extract_pace_result(pace_like)
+
+    if pace is None:
+        return DiagnosticStatus(
+            name="PACE state-space convergence",
+            value=None,
+            threshold=None,
+            passed=None,
+            message="not provided",
+        )
+
+    delta = _get(pace, "delta")
+    threshold = _get(pace, "threshold")
+    converged = _get(pace, "converged")
+
+    if converged is True:
+        message = "within threshold"
+    elif converged is False:
+        message = "above threshold"
+    else:
+        message = "reported without pass/fail decision"
+
+    return DiagnosticStatus(
+        name="PACE state-space convergence",
+        value=None if delta is None else float(delta),
+        threshold=None if threshold is None else float(threshold),
+        passed=converged,
+        message=message,
+    )
+
+
+def pace_summary_to_markdown(
+    pace_like: Any,
+    *,
+    title: str = "PACE state-space convergence",
+    digits: int = 4,
+) -> str:
+    """
+    Convert a PACEResult-like object into a compact markdown summary.
+
+    This is intentionally scalar and advisor/report friendly. The detailed
+    chain-by-cell table is better shown as the PACE heatmap.
+    """
+    pace = _extract_pace_result(pace_like)
+
+    if pace is None:
+        return f"### {title}\n\nNot provided.\n"
+
+    bootstrap = _get(pace, "bootstrap")
+    confidence_level = None
+    bootstrap_upper = None
+
+    if bootstrap is not None:
+        confidence_level = _get(bootstrap, "confidence_level")
+        bootstrap_upper = _get(bootstrap, "upper_quantile")
+
+    delta = _get(pace, "delta")
+    raw_delta = _get(pace, "raw_delta")
+    correction_factor = _get(pace, "correction_factor")
+    threshold = _get(pace, "threshold")
+    converged = _get(pace, "converged")
+    n_cells = _get(pace, "n_cells")
+    n_samples = _get(pace, "n_total_samples")
+
+    if converged is True:
+        status = "PASS"
+    elif converged is False:
+        status = "WARN"
+    else:
+        status = "INFO"
+
+    if confidence_level is None:
+        bootstrap_label = "Bootstrap upper"
+    else:
+        bootstrap_label = f"Bootstrap upper {100 * float(confidence_level):.0f}%"
+
+    lines = [
+        f"### {title}",
+        "",
+        f"Delta: {_fmt(delta, digits)}",
+        f"Raw delta: {_fmt(raw_delta, digits)}",
+        f"Correction factor: {_fmt(correction_factor, digits)}",
+        f"{bootstrap_label}: {_fmt(bootstrap_upper, digits)}",
+        f"Threshold: {_fmt(threshold, digits)}",
+        f"Status: {status}",
+        f"Number of cells: {_fmt(n_cells, 0)}",
+        f"Number of samples: {_fmt(n_samples, 0)}",
+    ]
+
+    return "\n".join(lines)
+
 def evaluate_diagnostics(
     *,
     vote_tv: Any | None = None,
     compactness_tv: Any | None = None,
     vote_rhat: Any | None = None,
     compactness_rhat: Any | None = None,
+    pace_result: Any | None = None,
     thresholds: ConvergenceThresholds | None = None,
 ) -> list[DiagnosticStatus]:
     """
@@ -226,6 +345,11 @@ def evaluate_diagnostics(
                     message=message,
                 )
             )
+
+
+
+    if pace_result is not None:
+        statuses.append(pace_status(pace_result))
 
     return statuses
 
@@ -415,6 +539,7 @@ def build_diagnostic_report(
     compactness_tv: Any | None = None,
     vote_rhat: Any | None = None,
     compactness_rhat: Any | None = None,
+    pace_result: Any | None = None,
     vote_percentiles: Any | None = None,
     compactness_percentiles: Any | None = None,
     thresholds: ConvergenceThresholds | None = None,
@@ -431,6 +556,7 @@ def build_diagnostic_report(
         compactness_tv=compactness_tv,
         vote_rhat=vote_rhat,
         compactness_rhat=compactness_rhat,
+        pace_result=pace_result,
         thresholds=thresholds,
     )
 
@@ -454,6 +580,16 @@ def build_diagnostic_report(
         "",
         rhat_table_to_markdown(compactness_rhat, title="Compactness R-hat"),
     ]
+
+    if pace_result is not None:
+        blocks.extend(
+            [
+                "",
+                "## PACE diagnostic",
+                "",
+                pace_summary_to_markdown(pace_result),
+            ]
+        )
 
     if vote_percentiles is not None or compactness_percentiles is not None:
         blocks.extend(
@@ -495,6 +631,7 @@ def write_diagnostic_report(
     compactness_tv: Any | None = None,
     vote_rhat: Any | None = None,
     compactness_rhat: Any | None = None,
+    pace_result: Any | None = None,
     vote_percentiles: Any | None = None,
     compactness_percentiles: Any | None = None,
     thresholds: ConvergenceThresholds | None = None,
@@ -513,6 +650,7 @@ def write_diagnostic_report(
         compactness_tv=compactness_tv,
         vote_rhat=vote_rhat,
         compactness_rhat=compactness_rhat,
+        pace_result=pace_result,
         vote_percentiles=vote_percentiles,
         compactness_percentiles=compactness_percentiles,
         thresholds=thresholds,
