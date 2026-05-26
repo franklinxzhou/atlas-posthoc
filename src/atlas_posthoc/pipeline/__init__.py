@@ -16,6 +16,14 @@ from atlas_posthoc.pipeline.chain_partitions import (
     build_multi_chain_partitions,
 )
 
+from atlas_posthoc.pipeline.pace_workflow import (
+    PACEWorkflowError,
+    PACEWorkflowResult,
+    run_pace_workflow,
+    run_pace_workflow_from_chains,
+    run_pace_workflow_from_partitions,
+)
+
 __all__ = [
     # chain observables
     "ChainObservableError",
@@ -32,4 +40,11 @@ __all__ = [
     "MultiChainPartitionResult",
     "build_chain_partitions",
     "build_multi_chain_partitions",
+
+    # PACE workflow
+    "PACEWorkflowError",
+    "PACEWorkflowResult",
+    "run_pace_workflow",
+    "run_pace_workflow_from_chains",
+    "run_pace_workflow_from_partitions",
 ]

@@ -21,3 +21,5 @@ __pycache__/
 .ruff_cache/
 temp.py
 outputs/
+
+src/atlas_posthoc.egg-info/
