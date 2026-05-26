@@ -20,6 +20,8 @@ from atlas_posthoc.io.cache import write_pipeline_cache
 from atlas_posthoc.plotting.marginals import (
     plot_vote_share_marginals,
     plot_compactness_marginals,
+    plot_vote_share_boxplots,
+    plot_compactness_boxplots,
 )
 from atlas_posthoc.plotting.convergence import (
     plot_vote_share_tv_convergence,
@@ -174,11 +176,27 @@ def main() -> None:
     )
     plt.close(fig)
 
+    fig, ax = plot_vote_share_boxplots(
+        obs.vote_runs,
+        title="Ordered vote-share boxplots by chain",
+        y_limits=(0.20, 0.82),
+        output_path=FIGURE_DIR / "oh_vote_share_boxplots.png",
+    )
+    plt.close(fig)
+
     fig, ax = plot_compactness_marginals(
         obs.compactness_runs,
         title="Ordered compactness marginals by chain",
         y_limits=(15, 55),
         output_path=FIGURE_DIR / "oh_compactness_marginals.png",
+    )
+    plt.close(fig)
+
+    fig, ax = plot_compactness_boxplots(
+        obs.compactness_runs,
+        title="Ordered compactness boxplots by chain",
+        y_limits=(15, 55),
+        output_path=FIGURE_DIR / "oh_compactness_boxplots.png",
     )
     plt.close(fig)
 
@@ -243,7 +261,9 @@ def main() -> None:
     print(f"  {OUTPUT_DIR / 'diagnostics' / 'vote_rhat.json'}")
     print(f"  {OUTPUT_DIR / 'diagnostics' / 'compactness_rhat.json'}")
     print(f"  {FIGURE_DIR / 'oh_vote_share_marginals.png'}")
+    print(f"  {FIGURE_DIR / 'oh_vote_share_boxplots.png'}")
     print(f"  {FIGURE_DIR / 'oh_compactness_marginals.png'}")
+    print(f"  {FIGURE_DIR / 'oh_compactness_boxplots.png'}")
     print(f"  {FIGURE_DIR / 'oh_vote_share_tv_convergence.png'}")
     print(f"  {FIGURE_DIR / 'oh_compactness_tv_convergence.png'}")
     print(f"  {FIGURE_DIR / 'oh_vote_share_rhat.png'}")
