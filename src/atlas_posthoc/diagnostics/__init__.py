@@ -23,6 +23,23 @@ from atlas_posthoc.diagnostics.rhat import (
     summarize_gelman_rubin_by_rank,
 )
 
+from atlas_posthoc.diagnostics.partition_metrics import (
+    PairwiseDistanceMatrix,
+    PartitionMetricError,
+    PartitionMetricName,
+    PartitionOverlap,
+    TransferDistanceResult,
+    get_partition_metric,
+    normalized_transfer_distance,
+    optimal_transport_distance,
+    pairwise_partition_distance_matrix,
+    partition_overlap,
+    population_transfer_distance,
+    transfer_distance_result,
+    unconstrained_transfer_distance,
+    unit_transfer_distance,
+)
+
 __all__ = [
     # total_variation
     "PairwiseTVResult",
@@ -46,4 +63,20 @@ __all__ = [
     "rank_interpretation",
     "rank_normalized_split_r_hat",
     "summarize_gelman_rubin_by_rank",
+
+    # partition_metrics
+    "PairwiseDistanceMatrix",
+    "PartitionMetricError",
+    "PartitionMetricName",
+    "PartitionOverlap",
+    "TransferDistanceResult",
+    "get_partition_metric",
+    "normalized_transfer_distance",
+    "optimal_transport_distance",
+    "pairwise_partition_distance_matrix",
+    "partition_overlap",
+    "population_transfer_distance",
+    "transfer_distance_result",
+    "unconstrained_transfer_distance",
+    "unit_transfer_distance",
 ]
