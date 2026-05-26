@@ -49,6 +49,16 @@ from atlas_posthoc.plotting.maps import (
     validate_geometry,
 )
 
+from atlas_posthoc.plotting.pace import (
+    PACEHeatmapValue,
+    PACECellSort,
+    PACEPlotError,
+    plot_pace_contingency_heatmap,
+    plot_pace_count_heatmap,
+    plot_pace_heatmap,
+    plot_pace_probability_heatmap,
+)
+
 __all__ = [
     # style
     "MANUSCRIPT_STYLE",
@@ -90,5 +100,20 @@ __all__ = [
     "plot_vote_share_tv_convergence",
 
     # maps
+    "MapPlotError",
     "assign_small_units",
+    "assign_small_units_to_reference_plan",
+    "make_oh_enacted_congressional_map",
+    "make_reference_plan_map",
+    "plot_reference_plan_map",
+    "validate_geometry",
+
+    # pace
+    "PACEHeatmapValue",
+    "PACECellSort",
+    "PACEPlotError",
+    "plot_pace_contingency_heatmap",
+    "plot_pace_count_heatmap",
+    "plot_pace_heatmap",
+    "plot_pace_probability_heatmap",
 ]
