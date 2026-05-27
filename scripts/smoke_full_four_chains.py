@@ -1,3 +1,5 @@
+# Legacy code before implementing PACE; don't use; won't work!
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -39,15 +41,15 @@ BASE = Path(
 GRAPH_PATH = BASE / "data/graph/OHpct20.json"
 
 CHAINS = [
-    BASE / "outputs/chains/soft_constraint/congressional/run5_cntyw20.0_mcdw20.0_isoWeight0.25_constWeight5.0.jsonl",
-    BASE / "outputs/chains/soft_constraint/congressional/run6_cntyw20.0_mcdw20.0_isoWeight0.25_constWeight5.0.jsonl",
-    BASE / "outputs/chains/soft_constraint/congressional/run7_cntyw20.0_mcdw20.0_isoWeight0.25_constWeight5.0.jsonl",
-    BASE / "outputs/chains/soft_constraint/congressional/run8_cntyw20.0_mcdw20.0_isoWeight0.25_constWeight5.0.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run13_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run14_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run15_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run16_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
 ]
 
-CHAIN_IDS = ["run5", "run6", "run7", "run8"]
+CHAIN_IDS = ["run13", "run14", "run15", "run16"]
 
-OUTPUT_DIR = Path("outputs/smoke_full_four_chains")
+OUTPUT_DIR = Path("outputs/smoke_full_four_chains_13_16")
 FIGURE_DIR = OUTPUT_DIR / "figures"
 REPORT_PATH = OUTPUT_DIR / "diagnostic_report.md"
 
@@ -234,12 +236,13 @@ def main() -> None:
 
     write_diagnostic_report(
         REPORT_PATH,
-        title="Ohio congressional Atlas post-hoc diagnostics: run5-run8",
+        title="Ohio congressional Atlas post-hoc diagnostics: run13-run16",
         chain_summaries=obs.summaries(),
         vote_tv=vote_tv,
         compactness_tv=compactness_tv,
         vote_rhat=vote_rhat,
         compactness_rhat=compactness_rhat,
+        pace_result=None,
         notes=(
             "This smoke test was generated from four AtlasIO chains. "
             "Vote-share vectors are sorted from most Republican to least Republican. "
