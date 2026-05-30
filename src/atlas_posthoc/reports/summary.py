@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 
+import numpy as np
+
+
 class ReportError(Exception):
     """Base exception for report-generation helpers."""
 
@@ -87,6 +90,103 @@ def _status_symbol(passed: bool | None) -> str:
     if passed is False:
         return "WARN"
     return "INFO"
+
+
+def _coerce_trace_list(traces_like: Any) -> list[Any]:
+    if traces_like is None:
+        return []
+
+    if isinstance(traces_like, Mapping):
+        if "polsby_popper_traces" in traces_like:
+            return list(traces_like["polsby_popper_traces"])
+        if "traces" in traces_like:
+            return list(traces_like["traces"])
+        return list(traces_like.values())
+
+    return list(traces_like)
+
+
+def _trace_get(trace: Any, key: str, default: Any = None) -> Any:
+    if isinstance(trace, Mapping):
+        return trace.get(key, default)
+    return getattr(trace, key, default)
+
+
+def _tail_mean(values: Sequence[float], *, tail_n: int | None = 50) -> float:
+    arr = np.asarray(values, dtype=float)
+    arr = arr[np.isfinite(arr)]
+
+    if arr.size == 0:
+        return float("nan")
+
+    if tail_n is not None and tail_n > 0:
+        arr = arr[-tail_n:]
+
+    return float(np.mean(arr))
+
+
+def polsby_popper_traces_to_markdown(
+    traces_like: Any,
+    *,
+    title: str = "Polsby-Popper compactness traces",
+    tail_n: int | None = 50,
+    digits: int = 4,
+) -> str:
+    """
+    Summarize Polsby-Popper compactness traces in markdown.
+
+    This is descriptive, not a pass/fail convergence diagnostic. It reports
+    average and minimum Polsby-Popper behavior by chain.
+    """
+    traces = _coerce_trace_list(traces_like)
+
+    if not traces:
+        return f"### {title}\n\nNot provided.\n"
+
+    lines = [
+        f"### {title}",
+        "",
+        "| Chain | Maps | Final avg PP | Final min PP | Tail avg PP | Tail min PP | Worst min PP | Convention |",
+        "|---|---:|---:|---:|---:|---:|---:|---|",
+    ]
+
+    for trace in traces:
+        chain_id = _trace_get(trace, "chain_id", "NA")
+        avg = _trace_get(trace, "average_polsby_popper", [])
+        min_ = _trace_get(trace, "minimum_polsby_popper", [])
+        convention = _trace_get(trace, "convention", "NA")
+        n_maps = _trace_get(trace, "n_maps", len(avg))
+
+        avg_arr = np.asarray(avg, dtype=float)
+        min_arr = np.asarray(min_, dtype=float)
+
+        final_avg = float(avg_arr[-1]) if avg_arr.size else float("nan")
+        final_min = float(min_arr[-1]) if min_arr.size else float("nan")
+        tail_avg = _tail_mean(avg_arr, tail_n=tail_n)
+        tail_min = _tail_mean(min_arr, tail_n=tail_n)
+        worst_min = float(np.nanmin(min_arr)) if min_arr.size else float("nan")
+
+        lines.append(
+            "| "
+            f"{chain_id} | "
+            f"{_fmt(n_maps, 0)} | "
+            f"{_fmt(final_avg, digits)} | "
+            f"{_fmt(final_min, digits)} | "
+            f"{_fmt(tail_avg, digits)} | "
+            f"{_fmt(tail_min, digits)} | "
+            f"{_fmt(worst_min, digits)} | "
+            f"{convention} |"
+        )
+
+    if tail_n is not None:
+        lines.extend(
+            [
+                "",
+                f"Tail summaries use the final {tail_n} saved maps per chain.",
+            ]
+        )
+
+    return "\n".join(lines)
 
 
 def final_tv(tv_result: Any) -> float | None:
@@ -543,6 +643,7 @@ def build_diagnostic_report(
     vote_percentiles: Any | None = None,
     compactness_percentiles: Any | None = None,
     thresholds: ConvergenceThresholds | None = None,
+    polsby_popper_traces: Any | None = None,
     notes: str | None = None,
 ) -> str:
     """
@@ -580,6 +681,16 @@ def build_diagnostic_report(
         "",
         rhat_table_to_markdown(compactness_rhat, title="Compactness R-hat"),
     ]
+
+    if polsby_popper_traces is not None:
+        blocks.extend(
+            [
+                "",
+                "## Polsby-Popper compactness traces",
+                "",
+                polsby_popper_traces_to_markdown(polsby_popper_traces),
+            ]
+        )
 
     if pace_result is not None:
         blocks.extend(
@@ -636,6 +747,7 @@ def write_diagnostic_report(
     compactness_percentiles: Any | None = None,
     thresholds: ConvergenceThresholds | None = None,
     notes: str | None = None,
+    polsby_popper_traces: Any | None = None,
 ) -> Path:
     """
     Write a markdown diagnostic report to disk.
@@ -655,6 +767,7 @@ def write_diagnostic_report(
         compactness_percentiles=compactness_percentiles,
         thresholds=thresholds,
         notes=notes,
+        polsby_popper_traces=polsby_popper_traces,
     )
 
     p.write_text(report, encoding="utf-8")

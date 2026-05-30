@@ -15,6 +15,7 @@ from atlas_posthoc.reports.summary import (
     write_diagnostic_report,
     pace_status,
     pace_summary_to_markdown,
+    polsby_popper_traces_to_markdown,
 )
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "write_diagnostic_report",
     "pace_status",
     "pace_summary_to_markdown",
+    "polsby_popper_traces_to_markdown",
 ]
