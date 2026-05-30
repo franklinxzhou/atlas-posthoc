@@ -69,6 +69,17 @@ from atlas_posthoc.plotting.polsby_popper import (
     plot_polsby_popper_trace_panel,
 )
 
+
+from atlas_posthoc.plotting.municipal_splits import (
+    MunicipalSplitPlotError,
+    OustedScale,
+    plot_cut_municipalities_trace,
+    plot_municipal_split_distribution_panel,
+    plot_municipal_split_scatter,
+    plot_municipal_split_trace_panel,
+    plot_ousted_population_trace,
+)
+
 __all__ = [
     # style
     "MANUSCRIPT_STYLE",
@@ -134,4 +145,13 @@ __all__ = [
     "plot_minimum_polsby_popper_trace",
     "plot_polsby_popper_trace",
     "plot_polsby_popper_trace_panel",
+
+    # municipal_splits
+    "MunicipalSplitPlotError",
+    "OustedScale",
+    "plot_cut_municipalities_trace",
+    "plot_municipal_split_distribution_panel",
+    "plot_municipal_split_scatter",
+    "plot_municipal_split_trace_panel",
+    "plot_ousted_population_trace",
 ]

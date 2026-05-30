@@ -31,6 +31,15 @@ from atlas_posthoc.observables.polsby_popper import (
     summarize_polsby_popper_scores,
 )
 
+from atlas_posthoc.observables.municipal_splits import (
+    MunicipalSplitError,
+    MunicipalSplitPlanSummary,
+    MunicipalSplitTrace,
+    compute_municipal_split_statistics_for_assignment,
+    compute_municipal_split_statistics_for_assignments,
+    make_municipal_split_traces,
+)
+
 
 __all__ = [
     # vote share
@@ -62,4 +71,13 @@ __all__ = [
     "polsby_popper_to_isoperimetric",
     "summarize_polsby_popper_matrix",
     "summarize_polsby_popper_scores",
+
+    # municipal_splits
+    "MunicipalSplitError",
+    "MunicipalSplitPlanSummary",
+    "MunicipalSplitTrace",
+    "compute_municipal_split_statistics_for_assignment",
+    "compute_municipal_split_statistics_for_assignments",
+    "make_municipal_split_traces",
 ]
+
