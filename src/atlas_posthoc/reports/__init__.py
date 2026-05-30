@@ -16,6 +16,7 @@ from atlas_posthoc.reports.summary import (
     pace_status,
     pace_summary_to_markdown,
     polsby_popper_traces_to_markdown,
+    municipal_split_traces_to_markdown,
 )
 
 __all__ = [
@@ -36,4 +37,5 @@ __all__ = [
     "pace_status",
     "pace_summary_to_markdown",
     "polsby_popper_traces_to_markdown",
+    "municipal_split_traces_to_markdown",
 ]

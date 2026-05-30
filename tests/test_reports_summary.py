@@ -6,6 +6,7 @@ from atlas_posthoc.reports.summary import (
     evaluate_diagnostics,
     final_tv,
     pace_summary_to_markdown,
+    municipal_split_traces_to_markdown,
     rhat_table_to_markdown,
     write_diagnostic_report,
 )
@@ -50,6 +51,17 @@ class FakePACE:
     contingency: list[list[int]]
     cell_summaries: list
     bootstrap: FakeBootstrap | None = None
+
+@dataclass
+class FakeMunicipalSplitTrace:
+    chain_id: str
+    proposals: list[int]
+    n_cut_municipalities: list[int]
+    ousted_population: list[float]
+    ousted_population_share: list[float]
+    n_maps: int
+    municipality_cols: list[str]
+    pop_col: str
 
 
 def fake_rhat():
@@ -193,3 +205,58 @@ def test_build_diagnostic_report_with_pace():
     assert "## PACE diagnostic" in report
     assert "PACE state-space convergence" in report
     assert "Status: PASS" in report
+
+
+
+def fake_municipal_split_traces():
+    return [
+        FakeMunicipalSplitTrace(
+            chain_id="run37",
+            proposals=[0, 10000, 20000],
+            n_cut_municipalities=[20, 22, 21],
+            ousted_population=[100000.0, 120000.0, 110000.0],
+            ousted_population_share=[0.0085, 0.0102, 0.0093],
+            n_maps=3,
+            municipality_cols=["COUNTY", "MCD"],
+            pop_col="POP20",
+        ),
+        FakeMunicipalSplitTrace(
+            chain_id="run38",
+            proposals=[0, 10000, 20000],
+            n_cut_municipalities=[19, 20, 20],
+            ousted_population=[90000.0, 95000.0, 98000.0],
+            ousted_population_share=[0.0076, 0.0081, 0.0083],
+            n_maps=3,
+            municipality_cols=["COUNTY", "MCD"],
+            pop_col="POP20",
+        ),
+    ]
+
+def test_municipal_split_traces_to_markdown():
+    text = municipal_split_traces_to_markdown(
+        fake_municipal_split_traces(),
+        tail_n=2,
+    )
+
+    assert "Municipal split traces" in text
+    assert "Final cuts" in text
+    assert "Tail cuts" in text
+    assert "Final ousted share" in text
+    assert "Tail ousted pop." in text
+    assert "run37" in text
+    assert "run38" in text
+    assert "COUNTY" in text
+    assert "MCD" in text
+
+
+def test_build_diagnostic_report_with_municipal_splits():
+    report = build_diagnostic_report(
+        title="Municipal report",
+        vote_rhat=fake_rhat(),
+        municipal_split_traces=fake_municipal_split_traces(),
+    )
+
+    assert "# Municipal report" in report
+    assert "## Municipal split diagnostics" in report
+    assert "Municipal split traces" in report
+    assert "Final cuts" in report

@@ -188,6 +188,75 @@ def polsby_popper_traces_to_markdown(
 
     return "\n".join(lines)
 
+def municipal_split_traces_to_markdown(
+    traces_like: Any,
+    *,
+    title: str = "Municipal split traces",
+    tail_n: int | None = 50,
+    digits: int = 4,
+) -> str:
+    """
+    Summarize municipal split traces in markdown.
+
+    This is descriptive, not a pass/fail convergence diagnostic.
+    It reports both the number of cut municipalities and the ousted municipal
+    population behavior by chain.
+    """
+    traces = _coerce_trace_list(traces_like)
+
+    if not traces:
+        return f"### {title}\n\nNot provided.\n"
+
+    lines = [
+        f"### {title}",
+        "",
+        "| Chain | Maps | Final cuts | Tail cuts | Final ousted share | Tail ousted share | Final ousted pop. | Tail ousted pop. | Municipality cols |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---|",
+    ]
+
+    for trace in traces:
+        chain_id = _trace_get(trace, "chain_id", "NA")
+        cuts = _trace_get(trace, "n_cut_municipalities", [])
+        ousted_share = _trace_get(trace, "ousted_population_share", [])
+        ousted_pop = _trace_get(trace, "ousted_population", [])
+        municipality_cols = _trace_get(trace, "municipality_cols", "NA")
+        n_maps = _trace_get(trace, "n_maps", len(cuts))
+
+        cuts_arr = np.asarray(cuts, dtype=float)
+        share_arr = np.asarray(ousted_share, dtype=float)
+        pop_arr = np.asarray(ousted_pop, dtype=float)
+
+        final_cuts = float(cuts_arr[-1]) if cuts_arr.size else float("nan")
+        final_share = float(share_arr[-1]) if share_arr.size else float("nan")
+        final_pop = float(pop_arr[-1]) if pop_arr.size else float("nan")
+
+        tail_cuts = _tail_mean(cuts_arr, tail_n=tail_n)
+        tail_share = _tail_mean(share_arr, tail_n=tail_n)
+        tail_pop = _tail_mean(pop_arr, tail_n=tail_n)
+
+        lines.append(
+            "| "
+            f"{chain_id} | "
+            f"{_fmt(n_maps, 0)} | "
+            f"{_fmt(final_cuts, 0)} | "
+            f"{_fmt(tail_cuts, 2)} | "
+            f"{_fmt(final_share, digits)} | "
+            f"{_fmt(tail_share, digits)} | "
+            f"{_fmt(final_pop, 0)} | "
+            f"{_fmt(tail_pop, 0)} | "
+            f"{municipality_cols} |"
+        )
+
+    if tail_n is not None:
+        lines.extend(
+            [
+                "",
+                f"Tail summaries use the final {tail_n} saved maps per chain.",
+            ]
+        )
+
+    return "\n".join(lines)
+
 
 def final_tv(tv_result: Any) -> float | None:
     """
@@ -640,10 +709,11 @@ def build_diagnostic_report(
     vote_rhat: Any | None = None,
     compactness_rhat: Any | None = None,
     pace_result: Any | None = None,
+    polsby_popper_traces: Any | None = None,
+    municipal_split_traces: Any | None = None,
     vote_percentiles: Any | None = None,
     compactness_percentiles: Any | None = None,
     thresholds: ConvergenceThresholds | None = None,
-    polsby_popper_traces: Any | None = None,
     notes: str | None = None,
 ) -> str:
     """
@@ -689,6 +759,16 @@ def build_diagnostic_report(
                 "## Polsby-Popper compactness traces",
                 "",
                 polsby_popper_traces_to_markdown(polsby_popper_traces),
+            ]
+        )
+
+    if municipal_split_traces is not None:
+        blocks.extend(
+            [
+                "",
+                "## Municipal split diagnostics",
+                "",
+                municipal_split_traces_to_markdown(municipal_split_traces),
             ]
         )
 
@@ -748,6 +828,7 @@ def write_diagnostic_report(
     thresholds: ConvergenceThresholds | None = None,
     notes: str | None = None,
     polsby_popper_traces: Any | None = None,
+    municipal_split_traces: Any | None = None,
 ) -> Path:
     """
     Write a markdown diagnostic report to disk.
@@ -763,11 +844,12 @@ def write_diagnostic_report(
         vote_rhat=vote_rhat,
         compactness_rhat=compactness_rhat,
         pace_result=pace_result,
+        polsby_popper_traces=polsby_popper_traces,
+        municipal_split_traces=municipal_split_traces,
         vote_percentiles=vote_percentiles,
         compactness_percentiles=compactness_percentiles,
         thresholds=thresholds,
         notes=notes,
-        polsby_popper_traces=polsby_popper_traces,
     )
 
     p.write_text(report, encoding="utf-8")
