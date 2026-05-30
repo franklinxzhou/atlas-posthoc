@@ -59,6 +59,16 @@ from atlas_posthoc.plotting.pace import (
     plot_pace_probability_heatmap,
 )
 
+
+from atlas_posthoc.plotting.polsby_popper import (
+    PolsbyPopperPlotError,
+    PolsbyPopperTraceKind,
+    plot_average_polsby_popper_trace,
+    plot_minimum_polsby_popper_trace,
+    plot_polsby_popper_trace,
+    plot_polsby_popper_trace_panel,
+)
+
 __all__ = [
     # style
     "MANUSCRIPT_STYLE",
@@ -116,4 +126,12 @@ __all__ = [
     "plot_pace_count_heatmap",
     "plot_pace_heatmap",
     "plot_pace_probability_heatmap",
+    
+    # Polsby-Popper
+    "PolsbyPopperPlotError",
+    "PolsbyPopperTraceKind",
+    "plot_average_polsby_popper_trace",
+    "plot_minimum_polsby_popper_trace",
+    "plot_polsby_popper_trace",
+    "plot_polsby_popper_trace_panel",
 ]

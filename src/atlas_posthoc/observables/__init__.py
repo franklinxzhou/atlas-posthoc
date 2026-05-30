@@ -17,6 +17,21 @@ from atlas_posthoc.observables.compactness import (
     ordered_compactness_from_scores,
 )
 
+from atlas_posthoc.observables.polsby_popper import (
+    InvalidPolicy,
+    IsoperimetricConvention,
+    PolsbyPopperError,
+    PolsbyPopperSummary,
+    PolsbyPopperTrace,
+    isoperimetric_to_polsby_popper,
+    make_polsby_popper_traces,
+    polsby_popper_from_area_perimeter,
+    polsby_popper_to_isoperimetric,
+    summarize_polsby_popper_matrix,
+    summarize_polsby_popper_scores,
+)
+
+
 __all__ = [
     # vote share
     "DistrictVoteTotals",
@@ -26,7 +41,7 @@ __all__ = [
     "compute_ordered_dem_vote_shares",
     "ordered_dem_vote_shares_from_totals",
 
-    # compactness
+    # compactness - isoperimetric score
     "CompactnessError",
     "OrderedCompactnessResult",
     "extract_compactness_scores_from_data",
@@ -34,4 +49,17 @@ __all__ = [
     "extract_ordered_compactness_from_record",
     "find_compactness_payload",
     "ordered_compactness_from_scores",
+
+    # Polsby-Popper
+    "InvalidPolicy",
+    "IsoperimetricConvention",
+    "PolsbyPopperError",
+    "PolsbyPopperSummary",
+    "PolsbyPopperTrace",
+    "isoperimetric_to_polsby_popper",
+    "make_polsby_popper_traces",
+    "polsby_popper_from_area_perimeter",
+    "polsby_popper_to_isoperimetric",
+    "summarize_polsby_popper_matrix",
+    "summarize_polsby_popper_scores",
 ]
