@@ -23,3 +23,6 @@ temp.py
 outputs/
 
 src/atlas_posthoc.egg-info/
+
+# I use scripts/ to store scripts that are not part of the package, so I don't want to include them in the package.
+scripts/
