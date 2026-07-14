@@ -3,6 +3,7 @@ import pytest
 from atlas_posthoc.assignments.keys import (
     AssignmentKeyError,
     choose_best_key_scheme,
+    default_candidate_key_schemes,
     diagnose_key_scheme,
     diagnose_key_schemes,
     format_key_scheme_diagnostics,
@@ -33,6 +34,51 @@ def ohio_nodes():
             "MCD": "3903500001",
         },
     ]
+
+
+def place_graph_nodes():
+    return [
+        {
+            "id": 1,
+            "COUNTY": "FRANKLIN",
+            "NAME": "COLUMBUS 01_FRANKLIN",
+            "ORIG_NAME": "COLUMBUS 01_FRANKLIN",
+            "COUSUB": "3904900001",
+            "PLACE": {"Columbus": 100},
+        },
+        {
+            "id": 2,
+            "COUNTY": "FRANKLIN",
+            "NAME": "COLUMBUS 02_FRANKLIN",
+            "ORIG_NAME": "COLUMBUS 02_FRANKLIN",
+            "COUSUB": "3904900002",
+            "PLACE": {"Columbus": 80, "Bexley": 20},
+        },
+    ]
+
+
+def test_default_candidates_follow_scalar_graph_schema_only():
+    baseline = default_candidate_key_schemes(ohio_nodes())
+    comparison = default_candidate_key_schemes(place_graph_nodes())
+
+    assert ["COUNTY", "MCD"] in baseline
+    assert ["MCD"] in baseline
+    assert all("COUSUB" not in scheme for scheme in baseline)
+
+    assert ["COUNTY", "COUSUB"] in comparison
+    assert ["COUSUB"] in comparison
+    assert all("MCD" not in scheme for scheme in comparison)
+    assert all("PLACE" not in scheme for scheme in comparison)
+
+
+def test_default_diagnostics_never_treat_place_mapping_as_assignment_key():
+    diagnostics = diagnose_key_schemes(
+        {("FRANKLIN",): 1},
+        place_graph_nodes(),
+    )
+
+    assert diagnostics
+    assert all("PLACE" not in diagnostic.key_cols for diagnostic in diagnostics)
 
 
 def test_diagnose_county_level_scheme():

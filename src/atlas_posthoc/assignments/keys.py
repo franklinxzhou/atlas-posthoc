@@ -53,25 +53,40 @@ class KeySchemeDiagnostic:
         return out
 
 
-def default_candidate_key_schemes() -> list[list[str]]:
+def default_candidate_key_schemes(
+    nodes: Iterable[Mapping[str, Any]] | None = None,
+) -> list[list[str]]:
     """
     Candidate key schemes useful for Ohio-style graph files.
 
-    The uploaded Ohio graph has node columns such as:
-        COUNTY, NAME, ORIG_NAME, MCD, id
+    The baseline Ohio graph uses scalar ``MCD`` while the comparison graph uses
+    scalar ``COUSUB``. Municipality candidates are included only when the
+    selected graph has that scalar column. ``PLACE`` is deliberately never an
+    assignment-key candidate because it is a population mapping, not node
+    identity.
 
     AtlasIO outputs may use either coarse county-level keys or finer graph-node
     keys. We test several plausible schemes and let the diagnostic decide.
     """
-    return [
+    if nodes is None:
+        municipality_cols = ["MCD"]
+    else:
+        nodes_list = list(nodes)
+        municipality_cols = [
+            col
+            for col in ("MCD", "COUSUB")
+            if nodes_list and all(col in node for node in nodes_list)
+        ]
+
+    candidates = [
         ["COUNTY", "NAME"],
         ["COUNTY", "ORIG_NAME"],
-        ["COUNTY", "MCD"],
-        ["NAME"],
-        ["ORIG_NAME"],
-        ["MCD"],
-        ["COUNTY"],
     ]
+    candidates.extend([["COUNTY", col] for col in municipality_cols])
+    candidates.extend([["NAME"], ["ORIG_NAME"]])
+    candidates.extend([[col] for col in municipality_cols])
+    candidates.append(["COUNTY"])
+    return candidates
 
 
 def node_id_from_node(
@@ -202,10 +217,10 @@ def diagnose_key_schemes(
       3. fewest unmatched assignment keys;
       4. shortest key scheme.
     """
-    if candidate_key_cols is None:
-        candidate_key_cols = default_candidate_key_schemes()
-
     nodes_list = list(nodes)
+
+    if candidate_key_cols is None:
+        candidate_key_cols = default_candidate_key_schemes(nodes_list)
 
     diagnostics = [
         diagnose_key_scheme(
