@@ -210,8 +210,8 @@ def municipal_split_traces_to_markdown(
     lines = [
         f"### {title}",
         "",
-        "| Chain | Maps | Final cuts | Tail cuts | Final ousted share | Tail ousted share | Final ousted pop. | Tail ousted pop. | Municipality cols |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---|",
+        "| Chain | Mode | Maps | Final cuts | Tail cuts | Final ousted share | Tail ousted share | Final ousted pop. | Tail ousted pop. | Denominator | Population basis | Municipality cols | Graph path |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
     ]
 
     for trace in traces:
@@ -221,6 +221,13 @@ def municipal_split_traces_to_markdown(
         ousted_pop = _trace_get(trace, "ousted_population", [])
         municipality_cols = _trace_get(trace, "municipality_cols", "NA")
         n_maps = _trace_get(trace, "n_maps", len(cuts))
+        geography_mode = str(
+            _trace_get(trace, "geography_mode", "COUSUB")
+        ).upper()
+        pop_col = _trace_get(trace, "pop_col", "POP20")
+        population_basis = _trace_get(trace, "population_basis", pop_col)
+        represented_population = _trace_get(trace, "represented_population")
+        graph_path = _trace_get(trace, "graph_path", "NA") or "NA"
 
         cuts_arr = np.asarray(cuts, dtype=float)
         share_arr = np.asarray(ousted_share, dtype=float)
@@ -237,6 +244,7 @@ def municipal_split_traces_to_markdown(
         lines.append(
             "| "
             f"{chain_id} | "
+            f"{geography_mode} | "
             f"{_fmt(n_maps, 0)} | "
             f"{_fmt(final_cuts, 0)} | "
             f"{_fmt(tail_cuts, 2)} | "
@@ -244,7 +252,10 @@ def municipal_split_traces_to_markdown(
             f"{_fmt(tail_share, digits)} | "
             f"{_fmt(final_pop, 0)} | "
             f"{_fmt(tail_pop, 0)} | "
-            f"{municipality_cols} |"
+            f"{_fmt(represented_population, 0)} | "
+            f"{population_basis} | "
+            f"{municipality_cols} | "
+            f"{graph_path} |"
         )
 
     if tail_n is not None:
