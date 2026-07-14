@@ -245,8 +245,37 @@ def test_municipal_split_traces_to_markdown():
     assert "Tail ousted pop." in text
     assert "run37" in text
     assert "run38" in text
+    assert "Mode" in text
+    assert "COUSUB" in text
+    assert "Denominator" in text
     assert "COUNTY" in text
     assert "MCD" in text
+
+
+def test_municipal_split_report_records_place_metadata():
+    text = municipal_split_traces_to_markdown(
+        [
+            {
+                "chain_id": "place-run",
+                "proposals": [0],
+                "n_cut_municipalities": [12],
+                "ousted_population": [1234],
+                "ousted_population_share": [0.001],
+                "n_maps": 1,
+                "municipality_cols": ["PLACE"],
+                "pop_col": "POP20",
+                "geography_mode": "PLACE",
+                "graph_path": "data/graph/OH_pct20.json",
+                "population_basis": "PLACE mapping",
+                "represented_population": 8344527,
+            }
+        ]
+    )
+
+    assert "PLACE" in text
+    assert "8,344,527" in text
+    assert "PLACE mapping" in text
+    assert "data/graph/OH_pct20.json" in text
 
 
 def test_build_diagnostic_report_with_municipal_splits():

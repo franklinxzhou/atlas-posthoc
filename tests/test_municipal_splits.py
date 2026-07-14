@@ -25,6 +25,15 @@ def graph_nodes():
     ]
 
 
+def place_graph_nodes():
+    return [
+        {"id": 1, "POP20": 100, "PLACE": {"Alpha": 60, "Beta": 20}},
+        {"id": 2, "POP20": 80, "PLACE": {"Alpha": 40}},
+        {"id": 3, "POP20": 50, "PLACE": {"Beta": 30}},
+        {"id": 4, "POP20": 70, "PLACE": {}},
+    ]
+
+
 def test_uncut_assignment():
     assignment = {
         1: 1,
@@ -65,6 +74,66 @@ def test_simple_cut_assignment():
     assert summary.ousted_population_share == pytest.approx(50 / 270)
     assert summary.max_ousted_single_municipality == pytest.approx(50)
     assert summary.mean_ousted_population_among_cut == pytest.approx(50)
+    assert summary.geography_mode == "COUSUB"
+    assert summary.population_basis == "POP20"
+    assert summary.represented_population == pytest.approx(270)
+
+
+def test_default_mode_preserves_explicit_legacy_cousub_result():
+    assignment = {1: 1, 2: 2, 3: 2, 4: 2, 5: 3}
+
+    default_summary = compute_municipal_split_statistics_for_assignment(
+        assignment,
+        graph_nodes(),
+    )
+    explicit_summary = compute_municipal_split_statistics_for_assignment(
+        assignment,
+        graph_nodes(),
+        geography_mode="COUSUB",
+        municipality_cols=("COUNTY", "MCD"),
+    )
+
+    assert default_summary.to_dict() == explicit_summary.to_dict()
+
+
+def test_place_mapping_uses_weighted_multi_membership_population():
+    summary = compute_municipal_split_statistics_for_assignment(
+        {1: 1, 2: 2, 3: 1, 4: 2},
+        place_graph_nodes(),
+        geography_mode="PLACE",
+        graph_path="data/graph/OH_pct20.json",
+    )
+
+    assert summary.n_cut_municipalities == 1
+    assert summary.n_total_municipalities == 2
+    assert summary.ousted_population == pytest.approx(40)
+    assert summary.total_population == pytest.approx(150)
+    assert summary.ousted_population_share == pytest.approx(40 / 150)
+    assert summary.municipality_cols == ["PLACE"]
+    assert summary.geography_mode == "PLACE"
+    assert summary.population_basis == "PLACE mapping"
+    assert summary.represented_population == pytest.approx(150)
+    assert summary.graph_path == "data/graph/OH_pct20.json"
+
+
+def test_place_mode_rejects_non_mapping_place_column():
+    nodes = [{"id": 1, "POP20": 100, "PLACE": "Alpha"}]
+
+    with pytest.raises(MunicipalSplitError, match="non-mapping"):
+        compute_municipal_split_statistics_for_assignment(
+            {1: 1},
+            nodes,
+            geography_mode="PLACE",
+        )
+
+
+def test_place_dictionary_cannot_be_used_as_scalar_municipality_key():
+    with pytest.raises(MunicipalSplitError, match="use geography_mode='PLACE'"):
+        compute_municipal_split_statistics_for_assignment(
+            {1: 1, 2: 2, 3: 1, 4: 2},
+            place_graph_nodes(),
+            municipality_cols=("PLACE",),
+        )
 
 
 def test_same_mcd_name_in_different_counties_is_separate():
@@ -136,6 +205,20 @@ def test_make_municipal_split_traces():
     assert traces[0].ousted_population[1] == pytest.approx(50)
 
 
+def test_make_place_traces_records_provenance_and_denominator():
+    traces = make_municipal_split_traces(
+        {"place-run": [{1: 1, 2: 2, 3: 1, 4: 2}]},
+        place_graph_nodes(),
+        geography_mode="PLACE",
+        graph_path="data/graph/OH_pct20.json",
+    )
+
+    assert traces[0].geography_mode == "PLACE"
+    assert traces[0].graph_path == "data/graph/OH_pct20.json"
+    assert traces[0].population_basis == "PLACE mapping"
+    assert traces[0].represented_population == pytest.approx(150)
+
+
 def make_traces():
     assignments_by_chain = {
         "run1": [
@@ -166,7 +249,7 @@ def test_plot_cut_municipalities_trace(tmp_path):
     )
 
     assert out.exists()
-    assert ax.get_ylabel() == "Number of cut municipalities"
+    assert ax.get_ylabel() == "Cut county subdivisions"
 
     plt.close(fig)
 
@@ -180,7 +263,7 @@ def test_plot_ousted_population_trace(tmp_path):
     )
 
     assert out.exists()
-    assert ax.get_ylabel() == "Ousted municipal population share"
+    assert ax.get_ylabel() == "Ousted COUSUB population share"
 
     plt.close(fig)
 
@@ -195,6 +278,8 @@ def test_plot_municipal_split_trace_panel(tmp_path):
 
     assert out.exists()
     assert len(axes) == 2
+    assert axes[0].get_title() == "Cut county subdivisions"
+    assert axes[1].get_ylabel() == "Ousted COUSUB population share"
 
     plt.close(fig)
 
@@ -222,6 +307,31 @@ def test_plot_municipal_split_scatter(tmp_path):
     )
 
     assert out.exists()
-    assert ax.get_xlabel() == "Number of cut municipalities"
+    assert ax.get_xlabel() == "Cut county subdivisions"
 
+    plt.close(fig)
+
+
+def test_place_plot_labels_and_legacy_json_default():
+    place_traces = make_municipal_split_traces(
+        {"place-run": [{1: 1, 2: 2, 3: 1, 4: 2}]},
+        place_graph_nodes(),
+        geography_mode="PLACE",
+    )
+    fig, axes = plot_municipal_split_trace_panel(place_traces)
+    assert axes[0].get_title() == "Cut Places"
+    assert axes[1].get_ylabel() == "Ousted Place population share"
+    plt.close(fig)
+
+    legacy_trace = make_traces()[0].to_dict()
+    for key in (
+        "geography_mode",
+        "graph_path",
+        "population_basis",
+        "represented_population",
+    ):
+        legacy_trace.pop(key)
+
+    fig, ax = plot_ousted_population_trace([legacy_trace])
+    assert ax.get_ylabel() == "Ousted COUSUB population share"
     plt.close(fig)

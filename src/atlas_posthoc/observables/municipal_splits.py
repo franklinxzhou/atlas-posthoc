@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any, Mapping, Sequence
+from pathlib import Path
+from typing import Any, Iterator, Literal, Mapping, Sequence
 
 import numpy as np
 
 
 class MunicipalSplitError(Exception):
     """Base exception for municipal-split observables."""
+
+
+GeographyMode = Literal["COUSUB", "PLACE"]
 
 
 @dataclass
@@ -21,6 +25,10 @@ class MunicipalSplitPlanSummary:
     mean_ousted_population_among_cut: float
     municipality_cols: list[str]
     pop_col: str
+    geography_mode: GeographyMode = "COUSUB"
+    population_basis: str = "POP20"
+    represented_population: float | None = None
+    graph_path: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -36,6 +44,10 @@ class MunicipalSplitTrace:
     n_maps: int
     municipality_cols: list[str]
     pop_col: str
+    geography_mode: GeographyMode = "COUSUB"
+    graph_path: str | None = None
+    population_basis: str = "POP20"
+    represented_population: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -109,6 +121,12 @@ def _municipality_key(
 
             raise MunicipalSplitError(f"node is missing municipality column {col!r}")
 
+        if isinstance(value, Mapping):
+            raise MunicipalSplitError(
+                f"municipality column {col!r} is a mapping; "
+                "use geography_mode='PLACE' for PLACE population mappings"
+            )
+
         values.append(value)
 
     return tuple(values)
@@ -135,11 +153,79 @@ def _node_population(
     return pop
 
 
+def _normalize_geography_mode(mode: str) -> GeographyMode:
+    normalized = str(mode).upper()
+    if normalized not in {"COUSUB", "PLACE"}:
+        raise MunicipalSplitError(
+            f"geography_mode must be 'COUSUB' or 'PLACE'; got {mode!r}"
+        )
+    return normalized  # type: ignore[return-value]
+
+
+def _municipality_population_pieces(
+    node: Mapping[str, Any],
+    *,
+    geography_mode: GeographyMode,
+    municipality_cols: Sequence[str],
+    place_col: str,
+    pop_col: str,
+    skip_missing_municipality: bool,
+) -> Iterator[tuple[tuple[Any, ...], float]]:
+    """Yield the municipality/population pieces represented by one graph node."""
+    if geography_mode == "COUSUB":
+        key = _municipality_key(
+            node,
+            municipality_cols=municipality_cols,
+            skip_missing_municipality=skip_missing_municipality,
+        )
+        if key is not None:
+            # Preserve the legacy scalar algorithm: one key receives full POP20.
+            yield key, _node_population(node, pop_col=pop_col)
+        return
+
+    if place_col not in node or node[place_col] is None:
+        if skip_missing_municipality:
+            return
+        raise MunicipalSplitError(f"node is missing PLACE mapping column {place_col!r}")
+
+    place_mapping = node[place_col]
+    if not isinstance(place_mapping, Mapping):
+        raise MunicipalSplitError(
+            f"node has non-mapping {place_col}={place_mapping!r}"
+        )
+
+    # PLACE keys are names in the current graph schema. Duplicate names are
+    # intentionally conflated until the graph carries stable Place GEOIDs.
+    for place, population in place_mapping.items():
+        if place is None or place == "":
+            if skip_missing_municipality:
+                continue
+            raise MunicipalSplitError(f"node has a missing Place key in {place_col!r}")
+
+        try:
+            place_population = float(population)
+        except (TypeError, ValueError) as exc:
+            raise MunicipalSplitError(
+                f"node has non-numeric {place_col}[{place!r}]={population!r}"
+            ) from exc
+
+        if place_population < 0:
+            raise MunicipalSplitError(
+                f"node has negative {place_col}[{place!r}] population "
+                f"{place_population}"
+            )
+
+        yield (place,), place_population
+
+
 def compute_municipal_split_statistics_for_assignment(
     assignment: Mapping[Any, Any] | Sequence[Any],
     graph_nodes: Any,
     *,
     municipality_cols: Sequence[str] = ("COUNTY", "MCD"),
+    geography_mode: GeographyMode = "COUSUB",
+    place_col: str = "PLACE",
+    graph_path: str | Path | None = None,
     node_id_col: str = "id",
     pop_col: str = "POP20",
     skip_missing_municipality: bool = True,
@@ -148,7 +234,13 @@ def compute_municipal_split_statistics_for_assignment(
     """
     Compute municipal split statistics for one districting assignment.
 
-    A municipality is cut if its nodes are assigned to more than one district.
+    In legacy ``COUSUB`` mode, one scalar municipality key receives the node's
+    full ``pop_col`` population. In ``PLACE`` mode, every entry in the node's
+    ``PLACE`` mapping is accumulated independently using its mapped population.
+    Empty mappings are excluded from the represented-population denominator.
+
+    A municipality is cut if its positive-population pieces are assigned to
+    more than one district.
 
     Ousted population is computed municipality-by-municipality as:
 
@@ -156,6 +248,7 @@ def compute_municipal_split_statistics_for_assignment(
 
     and then summed over municipalities.
     """
+    mode = _normalize_geography_mode(geography_mode)
     nodes = _as_graph_nodes(graph_nodes)
     assignment_by_node = _assignment_lookup(
         assignment,
@@ -185,25 +278,22 @@ def compute_municipal_split_statistics_for_assignment(
             missing_assignment_nodes.append(node_id)
             continue
 
-        key = _municipality_key(
+        for key, pop in _municipality_population_pieces(
             node,
+            geography_mode=mode,
             municipality_cols=municipality_cols,
+            place_col=place_col,
+            pop_col=pop_col,
             skip_missing_municipality=skip_missing_municipality,
-        )
+        ):
+            if key not in municipal_district_pop:
+                municipal_district_pop[key] = {}
+                municipal_total_pop[key] = 0.0
 
-        if key is None:
-            continue
-
-        pop = _node_population(node, pop_col=pop_col)
-
-        if key not in municipal_district_pop:
-            municipal_district_pop[key] = {}
-            municipal_total_pop[key] = 0.0
-
-        municipal_total_pop[key] += pop
-        municipal_district_pop[key][district] = (
-            municipal_district_pop[key].get(district, 0.0) + pop
-        )
+            municipal_total_pop[key] += pop
+            municipal_district_pop[key][district] = (
+                municipal_district_pop[key].get(district, 0.0) + pop
+            )
 
     if require_complete_assignment and missing_assignment_nodes:
         raise MunicipalSplitError(
@@ -257,8 +347,14 @@ def compute_municipal_split_statistics_for_assignment(
         n_total_municipalities=int(len(municipal_district_pop)),
         max_ousted_single_municipality=max_ousted,
         mean_ousted_population_among_cut=mean_ousted,
-        municipality_cols=list(municipality_cols),
+        municipality_cols=(
+            list(municipality_cols) if mode == "COUSUB" else [place_col]
+        ),
         pop_col=pop_col,
+        geography_mode=mode,
+        population_basis=(pop_col if mode == "COUSUB" else f"{place_col} mapping"),
+        represented_population=total_population,
+        graph_path=None if graph_path is None else str(graph_path),
     )
 
 
@@ -267,6 +363,9 @@ def compute_municipal_split_statistics_for_assignments(
     graph_nodes: Any,
     *,
     municipality_cols: Sequence[str] = ("COUNTY", "MCD"),
+    geography_mode: GeographyMode = "COUSUB",
+    place_col: str = "PLACE",
+    graph_path: str | Path | None = None,
     node_id_col: str = "id",
     pop_col: str = "POP20",
     skip_missing_municipality: bool = True,
@@ -280,6 +379,9 @@ def compute_municipal_split_statistics_for_assignments(
             assignment,
             graph_nodes,
             municipality_cols=municipality_cols,
+            geography_mode=geography_mode,
+            place_col=place_col,
+            graph_path=graph_path,
             node_id_col=node_id_col,
             pop_col=pop_col,
             skip_missing_municipality=skip_missing_municipality,
@@ -324,6 +426,9 @@ def make_municipal_split_traces(
     *,
     chain_ids: Sequence[str] | None = None,
     municipality_cols: Sequence[str] = ("COUNTY", "MCD"),
+    geography_mode: GeographyMode = "COUSUB",
+    place_col: str = "PLACE",
+    graph_path: str | Path | None = None,
     node_id_col: str = "id",
     pop_col: str = "POP20",
     output_frequency: int = 1,
@@ -337,6 +442,8 @@ def make_municipal_split_traces(
     Input assignments should be node-to-district mappings, or district vectors in
     graph-node order.
     """
+    mode = _normalize_geography_mode(geography_mode)
+
     if output_frequency <= 0:
         raise ValueError("output_frequency must be positive")
 
@@ -352,6 +459,9 @@ def make_municipal_split_traces(
             assignments,
             graph_nodes,
             municipality_cols=municipality_cols,
+            geography_mode=mode,
+            place_col=place_col,
+            graph_path=graph_path,
             node_id_col=node_id_col,
             pop_col=pop_col,
             skip_missing_municipality=skip_missing_municipality,
@@ -362,6 +472,13 @@ def make_municipal_split_traces(
             int(start_proposal + i * output_frequency)
             for i in range(len(summaries))
         ]
+
+        represented_populations = {s.represented_population for s in summaries}
+        if len(represented_populations) != 1:
+            raise MunicipalSplitError(
+                f"chain {chain_id!r} has inconsistent represented-population "
+                "denominators across assignments"
+            )
 
         traces.append(
             MunicipalSplitTrace(
@@ -380,8 +497,16 @@ def make_municipal_split_traces(
                     for s in summaries
                 ],
                 n_maps=len(summaries),
-                municipality_cols=list(municipality_cols),
+                municipality_cols=(
+                    list(municipality_cols) if mode == "COUSUB" else [place_col]
+                ),
                 pop_col=pop_col,
+                geography_mode=mode,
+                graph_path=None if graph_path is None else str(graph_path),
+                population_basis=(
+                    pop_col if mode == "COUSUB" else f"{place_col} mapping"
+                ),
+                represented_population=summaries[0].represented_population,
             )
         )
 

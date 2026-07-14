@@ -27,6 +27,7 @@ def write_tiny_graph(path):
                 "POP20": 100,
                 "G20PREDEM": 60,
                 "G20PREREP": 40,
+                "PLACE": {"Columbus": 75, "Bexley": 5},
             },
             {
                 "id": 1,
@@ -67,6 +68,7 @@ def test_read_graph_json(tmp_path):
     assert len(graph.adjacency) == 3
     assert graph.node_by_id[0]["COUNTY"] == "FRANKLIN"
     assert graph.node_by_id[2]["COUNTY"] == "CUYAHOGA"
+    assert graph.node_by_id[0]["PLACE"] == {"Columbus": 75, "Bexley": 5}
 
 
 def test_read_graph_nodes(tmp_path):

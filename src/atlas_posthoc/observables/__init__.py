@@ -32,6 +32,7 @@ from atlas_posthoc.observables.polsby_popper import (
 )
 
 from atlas_posthoc.observables.municipal_splits import (
+    GeographyMode,
     MunicipalSplitError,
     MunicipalSplitPlanSummary,
     MunicipalSplitTrace,
@@ -73,6 +74,7 @@ __all__ = [
     "summarize_polsby_popper_scores",
 
     # municipal_splits
+    "GeographyMode",
     "MunicipalSplitError",
     "MunicipalSplitPlanSummary",
     "MunicipalSplitTrace",
@@ -80,4 +82,3 @@ __all__ = [
     "compute_municipal_split_statistics_for_assignments",
     "make_municipal_split_traces",
 ]
-
