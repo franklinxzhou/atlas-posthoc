@@ -19,7 +19,6 @@ Given multiple AtlasIO.jl output files, typically four independent chains, `atla
 - enacted/reference-plan overlays;
 - convergence-gated enacted/reference-plan comparisons;
 - manuscript-ready maps and diagnostic plots;
-- state-space diagnostics, including Partition-based Approximation of Convergence Evaluation (PACE).
 
 We underscore this workflow: We first establish that the ensemble is trustworthy on the observables of interest. Then we use that ensemble to evaluate the enacted plan.
 
@@ -40,7 +39,10 @@ The first stable target is a diagnostic suite inspired by [this Connecticut redi
 - extract ordered compactness vectors;
 - compute four-chain total-variation diagnostics;
 - generate marginal and convergence plots;
-- run state-space diagnostics with PACE.
+- generate reusable convergence reports and cached manifests.
+
+PACE and graph-partition distance workflows now live in the sibling
+[`pace-for-atlas`](https://github.com/franklinxzhou/pace-for-atlas) project.
 
 ## Quick Start
 

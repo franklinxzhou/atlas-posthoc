@@ -49,17 +49,6 @@ from atlas_posthoc.plotting.maps import (
     validate_geometry,
 )
 
-from atlas_posthoc.plotting.pace import (
-    PACEHeatmapValue,
-    PACECellSort,
-    PACEPlotError,
-    plot_pace_contingency_heatmap,
-    plot_pace_count_heatmap,
-    plot_pace_heatmap,
-    plot_pace_probability_heatmap,
-)
-
-
 from atlas_posthoc.plotting.polsby_popper import (
     PolsbyPopperPlotError,
     PolsbyPopperTraceKind,
@@ -129,15 +118,6 @@ __all__ = [
     "plot_reference_plan_map",
     "validate_geometry",
 
-    # pace
-    "PACEHeatmapValue",
-    "PACECellSort",
-    "PACEPlotError",
-    "plot_pace_contingency_heatmap",
-    "plot_pace_count_heatmap",
-    "plot_pace_heatmap",
-    "plot_pace_probability_heatmap",
-    
     # Polsby-Popper
     "PolsbyPopperPlotError",
     "PolsbyPopperTraceKind",

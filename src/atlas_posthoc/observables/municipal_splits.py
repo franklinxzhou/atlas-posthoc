@@ -194,8 +194,7 @@ def _municipality_population_pieces(
             f"node has non-mapping {place_col}={place_mapping!r}"
         )
 
-    # PLACE keys are names in the current graph schema. Duplicate names are
-    # intentionally conflated until the graph carries stable Place GEOIDs.
+    # PLACE keys are stable Census Place GEOIDs in the current graph schema.
     for place, population in place_mapping.items():
         if place is None or place == "":
             if skip_missing_municipality:
