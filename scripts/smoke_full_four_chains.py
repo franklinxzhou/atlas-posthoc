@@ -1,7 +1,8 @@
-# Legacy code before implementing PACE; don't use; won't work!
+# Legacy four-chain smoke script; retained for reproducibility.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import matplotlib
@@ -38,29 +39,45 @@ BASE = Path(
     "/Users/franklinzhou/Documents/Work/Duke/Gerrymandering/ct-gerrymandering"
 )
 
-GRAPH_PATH = BASE / "data/graph/OHpct20.json"
+GRAPH_PATH = Path(
+    os.environ.get(
+        "ATLAS_POSTHOC_GRAPH_PATH",
+        str(BASE / "data/graph/OHpct20.json"),
+    )
+)
+GEOGRAPHY_MODE = os.environ.get("ATLAS_POSTHOC_GEOGRAPHY_MODE", "COUSUB").upper()
 
 CHAINS = [
-    BASE / "outputs/chains/soft_constraint/congressional/run13_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
-    BASE / "outputs/chains/soft_constraint/congressional/run14_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
-    BASE / "outputs/chains/soft_constraint/congressional/run15_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
-    BASE / "outputs/chains/soft_constraint/congressional/run16_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run37_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run38_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run39_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run40_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
 ]
 
-CHAIN_IDS = ["run13", "run14", "run15", "run16"]
+CHAIN_IDS = ["run37", "run38", "run39", "run40"]
 
-OUTPUT_DIR = Path("outputs/smoke_full_four_chains_13_16")
+OUTPUT_DIR = Path(
+    os.environ.get("ATLAS_POSTHOC_OUTPUT_DIR", "outputs/four_chains_37_40")
+)
 FIGURE_DIR = OUTPUT_DIR / "figures"
 REPORT_PATH = OUTPUT_DIR / "diagnostic_report.md"
 
 
 def main() -> None:
+    if GEOGRAPHY_MODE not in {"COUSUB", "PLACE"}:
+        raise ValueError("ATLAS_POSTHOC_GEOGRAPHY_MODE must be COUSUB or PLACE")
+
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
 
     print("=" * 80)
     print("Atlas post-hoc full four-chain smoke test")
     print("=" * 80)
+
+    print("\nConfiguration:")
+    print(f"  GRAPH_PATH: {GRAPH_PATH}")
+    print(f"  GEOGRAPHY_MODE: {GEOGRAPHY_MODE}")
+    print(f"  OUTPUT_DIR: {OUTPUT_DIR}")
 
     print("\n[1/6] Building chain observables...")
 
@@ -156,6 +173,7 @@ def main() -> None:
         compactness_rhat=compactness_rhat,
         extra={
             "graph_path": str(GRAPH_PATH),
+            "geography_mode": GEOGRAPHY_MODE,
             "chains": [str(path) for path in CHAINS],
             "chain_ids": CHAIN_IDS,
             "dem_col": "G20PREDEM",
@@ -242,7 +260,6 @@ def main() -> None:
         compactness_tv=compactness_tv,
         vote_rhat=vote_rhat,
         compactness_rhat=compactness_rhat,
-        pace_result=None,
         notes=(
             "This smoke test was generated from four AtlasIO chains. "
             "Vote-share vectors are sorted from most Republican to least Republican. "

@@ -5,7 +5,6 @@ from atlas_posthoc.reports.summary import (
     build_diagnostic_report,
     evaluate_diagnostics,
     final_tv,
-    pace_summary_to_markdown,
     municipal_split_traces_to_markdown,
     rhat_table_to_markdown,
     write_diagnostic_report,
@@ -25,32 +24,6 @@ class FakeRHat:
     num_ranks: int
     max_classic_r_hat: float
     max_rank_normalized_split_r_hat: float
-
-@dataclass
-class FakeBootstrap:
-    n_bootstrap: int
-    confidence_level: float
-    upper_quantile: float
-    bootstrap_deltas: list[float]
-    mode: str
-
-
-@dataclass
-class FakePACE:
-    delta: float
-    raw_delta: float
-    correction_factor: float
-    threshold: float
-    converged: bool
-    n_chains: int
-    n_cells: int
-    n_total_samples: int
-    chain_sizes: dict
-    labels: list[int]
-    chain_names: list[str]
-    contingency: list[list[int]]
-    cell_summaries: list
-    bootstrap: FakeBootstrap | None = None
 
 @dataclass
 class FakeMunicipalSplitTrace:
@@ -86,35 +59,6 @@ def fake_rhat():
         max_rank_normalized_split_r_hat=1.03,
     )
 
-
-def fake_pace():
-    return FakePACE(
-        delta=0.083,
-        raw_delta=0.125,
-        correction_factor=0.6667,
-        threshold=0.1,
-        converged=True,
-        n_chains=4,
-        n_cells=6,
-        n_total_samples=400,
-        chain_sizes={
-            "run5": 100,
-            "run6": 100,
-            "run7": 100,
-            "run8": 100,
-        },
-        labels=[0, 1, 2, 3, 4, 5],
-        chain_names=["run5", "run6", "run7", "run8"],
-        contingency=[],
-        cell_summaries=[],
-        bootstrap=FakeBootstrap(
-            n_bootstrap=100,
-            confidence_level=0.95,
-            upper_quantile=0.092,
-            bootstrap_deltas=[],
-            mode="pooled",
-        ),
-    )
 
 def test_final_tv():
     tv = FakeTV(proposals=[10, 20, 30], max_tvs=[0.5, 0.3, 0.1])
@@ -178,35 +122,6 @@ def test_write_diagnostic_report(tmp_path):
 
     assert out.exists()
     assert "Saved report" in out.read_text(encoding="utf-8")
-
-# Additional tests after adding PACE results to the reports/summary.py
-def test_pace_summary_to_markdown():
-    text = pace_summary_to_markdown(fake_pace())
-
-    assert "PACE state-space convergence" in text
-    assert "Delta: 0.0830" in text
-    assert "Raw delta: 0.1250" in text
-    assert "Correction factor: 0.6667" in text
-    assert "Bootstrap upper 95%: 0.0920" in text
-    assert "Threshold: 0.1000" in text
-    assert "Status: PASS" in text
-    assert "Number of cells: 6" in text
-    assert "Number of samples: 400" in text
-
-
-def test_build_diagnostic_report_with_pace():
-    report = build_diagnostic_report(
-        title="PACE report",
-        vote_rhat=fake_rhat(),
-        pace_result=fake_pace(),
-    )
-
-    assert "# PACE report" in report
-    assert "## PACE diagnostic" in report
-    assert "PACE state-space convergence" in report
-    assert "Status: PASS" in report
-
-
 
 def fake_municipal_split_traces():
     return [

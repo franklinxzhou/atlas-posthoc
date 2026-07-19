@@ -1,5 +1,5 @@
 """
-Call in the terminal: ATLAS_POSTHOC_LOCAL_PACE_N=50 python3 scripts/test_13_16.py
+Call in the terminal: python3 scripts/test_13_16.py
 """
 
 from __future__ import annotations
@@ -24,7 +24,6 @@ from atlas_posthoc.diagnostics.total_variation import (
     make_compactness_bins,
 )
 from atlas_posthoc.diagnostics.rhat import summarize_gelman_rubin_by_rank
-from atlas_posthoc.diagnostics.pace import pace_from_labels
 from atlas_posthoc.io.cache import write_pipeline_cache
 from atlas_posthoc.plotting.marginals import (
     plot_vote_share_marginals,
@@ -48,38 +47,35 @@ BASE = Path(
     )
 )
 
-GRAPH_PATH = BASE / "data/graph/OHpct20.json"
+GRAPH_PATH = Path(
+    os.environ.get(
+        "ATLAS_POSTHOC_GRAPH_PATH",
+        str(BASE / "data/graph/OHpct20.json"),
+    )
+)
+GEOGRAPHY_MODE = os.environ.get("ATLAS_POSTHOC_GEOGRAPHY_MODE", "COUSUB").upper()
 
 CHAINS = [
-    BASE / "outputs/chains/soft_constraint/congressional/run13_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
-    BASE / "outputs/chains/soft_constraint/congressional/run14_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
-    BASE / "outputs/chains/soft_constraint/congressional/run15_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
-    BASE / "outputs/chains/soft_constraint/congressional/run16_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run37_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run38_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run39_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+    BASE / "outputs/chains/soft_constraint/congressional/run40_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
 ]
 
-CHAIN_IDS = ["run13", "run14", "run15", "run16"]
+CHAIN_IDS = ["run37", "run38", "run39", "run40"]
 
 N_DISTRICTS = 15
 OUTPUT_FREQUENCY = 10000
 
-OUTPUT_DIR = Path("outputs/smoke_full_four_chains_13_16")
+OUTPUT_DIR = Path(
+    os.environ.get(
+        "ATLAS_POSTHOC_OUTPUT_DIR",
+        "outputs/smoke_full_four_chains_37_40",
+    )
+)
 FIGURE_DIR = OUTPUT_DIR / "figures"
 DIAGNOSTIC_DIR = OUTPUT_DIR / "diagnostics"
 REPORT_PATH = OUTPUT_DIR / "diagnostic_report.md"
-PACE_JSON_PATH = DIAGNOSTIC_DIR / "pace_local_smoke.json"
-
-# This is deliberately tiny. It only checks that PACE runs locally.
-LOCAL_PACE_N = int(os.environ.get("ATLAS_POSTHOC_LOCAL_PACE_N", "100"))
-LOCAL_PACE_STRIDE = int(os.environ.get("ATLAS_POSTHOC_LOCAL_PACE_STRIDE", "1"))
-
-# Coarse bins for turning continuous observables into PACE cells.
-# These are intentionally rough because this is only a smoke test.
-LOCAL_PACE_VOTE_BIN_WIDTH = float(
-    os.environ.get("ATLAS_POSTHOC_LOCAL_PACE_VOTE_BIN_WIDTH", "0.02")
-)
-LOCAL_PACE_COMPACTNESS_BIN_WIDTH = float(
-    os.environ.get("ATLAS_POSTHOC_LOCAL_PACE_COMPACTNESS_BIN_WIDTH", "2.0")
-)
 
 
 def safe_to_dict(x: Any) -> Any:
@@ -148,88 +144,20 @@ def print_parse_warnings(obs) -> None:
             print(f"    WARNING: {chain_id} has compactness errors")
 
 
-def build_quick_local_pace_labels(obs) -> tuple[list[int], list[str], dict[tuple[int, ...], int]]:
-    """
-    Build coarse PACE cell labels from a tiny local subset.
-
-    This is not the real Wasserplan/PACE diagnostic. It is just a local API
-    smoke test: continuous ordered observables are discretized into coarse cells.
-
-    Features used per plan:
-      1. most Republican vote-share rank
-      2. median vote-share rank
-      3. most Democratic vote-share rank
-      4. median compactness rank
-      5. worst compactness rank
-    """
-    if LOCAL_PACE_N <= 1:
-        raise ValueError(f"LOCAL_PACE_N must be > 1, got {LOCAL_PACE_N}")
-
-    if LOCAL_PACE_STRIDE <= 0:
-        raise ValueError(
-            f"LOCAL_PACE_STRIDE must be positive, got {LOCAL_PACE_STRIDE}"
-        )
-
-    label_to_code: dict[tuple[int, ...], int] = {}
-    labels: list[int] = []
-    chain_ids: list[str] = []
-
-    mid = N_DISTRICTS // 2
-
-    for chain_id in CHAIN_IDS:
-        vote = obs.vote_runs[chain_id][::LOCAL_PACE_STRIDE][:LOCAL_PACE_N]
-        comp = obs.compactness_runs[chain_id][::LOCAL_PACE_STRIDE][:LOCAL_PACE_N]
-
-        m = min(vote.shape[0], comp.shape[0])
-        assert m > 1, f"{chain_id}: not enough samples for local PACE"
-
-        vote = vote[:m]
-        comp = comp[:m]
-
-        for i in range(m):
-            cell_key = (
-                int(np.floor(vote[i, 0] / LOCAL_PACE_VOTE_BIN_WIDTH)),
-                int(np.floor(vote[i, mid] / LOCAL_PACE_VOTE_BIN_WIDTH)),
-                int(np.floor(vote[i, -1] / LOCAL_PACE_VOTE_BIN_WIDTH)),
-                int(np.floor(comp[i, mid] / LOCAL_PACE_COMPACTNESS_BIN_WIDTH)),
-                int(np.floor(comp[i, -1] / LOCAL_PACE_COMPACTNESS_BIN_WIDTH)),
-            )
-
-            if cell_key not in label_to_code:
-                label_to_code[cell_key] = len(label_to_code)
-
-            labels.append(label_to_code[cell_key])
-            chain_ids.append(chain_id)
-
-    return labels, chain_ids, label_to_code
 
 
-def write_pace_json(pace_result) -> None:
-    DIAGNOSTIC_DIR.mkdir(parents=True, exist_ok=True)
-
-    with PACE_JSON_PATH.open("w") as f:
-        json.dump(pace_result.to_dict(), f, indent=2)
-
-    print("  Wrote local PACE JSON:", PACE_JSON_PATH)
-
-
-def write_cache_with_optional_pace(
+def write_cache(
     *,
     obs,
     vote_tv,
     compactness_tv,
     vote_rhat,
     compactness_rhat,
-    pace_result,
 ):
-    """
-    Try the newer cache API with pace_result.
-
-    If your current write_pipeline_cache has not been updated for PACE yet,
-    fall back to the old API and still write PACE separately as JSON.
-    """
+    """Write the observable diagnostics and run metadata."""
     extra = {
         "graph_path": str(GRAPH_PATH),
+        "geography_mode": GEOGRAPHY_MODE,
         "chains": [str(path) for path in CHAINS],
         "chain_ids": CHAIN_IDS,
         "dem_col": "G20PREDEM",
@@ -237,41 +165,17 @@ def write_cache_with_optional_pace(
         "n_districts": N_DISTRICTS,
         "output_frequency": OUTPUT_FREQUENCY,
         "key_cols": ["NAME"],
-        "local_pace_n": LOCAL_PACE_N,
-        "local_pace_stride": LOCAL_PACE_STRIDE,
-        "local_pace_vote_bin_width": LOCAL_PACE_VOTE_BIN_WIDTH,
-        "local_pace_compactness_bin_width": LOCAL_PACE_COMPACTNESS_BIN_WIDTH,
-        "local_pace_note": (
-            "PACE was computed on a tiny coarse-binned local subset only. "
-            "Do not interpret this as a full-chain PACE result."
-        ),
     }
 
-    try:
-        return write_pipeline_cache(
-            OUTPUT_DIR,
-            observables=obs,
-            vote_tv=vote_tv,
-            compactness_tv=compactness_tv,
-            vote_rhat=vote_rhat,
-            compactness_rhat=compactness_rhat,
-            pace_result=pace_result,
-            extra=extra,
-        )
-    except TypeError as e:
-        print("  WARNING: write_pipeline_cache does not accept pace_result yet.")
-        print("  Falling back to old cache writer signature.")
-        print(f"  Original TypeError: {e}")
-
-        return write_pipeline_cache(
-            OUTPUT_DIR,
-            observables=obs,
-            vote_tv=vote_tv,
-            compactness_tv=compactness_tv,
-            vote_rhat=vote_rhat,
-            compactness_rhat=compactness_rhat,
-            extra=extra,
-        )
+    return write_pipeline_cache(
+        OUTPUT_DIR,
+        observables=obs,
+        vote_tv=vote_tv,
+        compactness_tv=compactness_tv,
+        vote_rhat=vote_rhat,
+        compactness_rhat=compactness_rhat,
+        extra=extra,
+    )
 
 
 def assert_expected_outputs_exist(expected_paths: list[Path]) -> None:
@@ -282,24 +186,24 @@ def assert_expected_outputs_exist(expected_paths: list[Path]) -> None:
 
 
 def main() -> None:
+    if GEOGRAPHY_MODE not in {"COUSUB", "PLACE"}:
+        raise ValueError("ATLAS_POSTHOC_GEOGRAPHY_MODE must be COUSUB or PLACE")
+
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     DIAGNOSTIC_DIR.mkdir(parents=True, exist_ok=True)
 
     print("=" * 80)
-    print("Atlas post-hoc four-chain smoke test with quick local PACE")
+    print("Atlas post-hoc four-chain smoke test")
     print("=" * 80)
 
     print("\nConfiguration:")
     print(f"  BASE: {BASE}")
     print(f"  GRAPH_PATH: {GRAPH_PATH}")
+    print(f"  GEOGRAPHY_MODE: {GEOGRAPHY_MODE}")
     print(f"  OUTPUT_DIR: {OUTPUT_DIR}")
-    print(f"  LOCAL_PACE_N: {LOCAL_PACE_N}")
-    print(f"  LOCAL_PACE_STRIDE: {LOCAL_PACE_STRIDE}")
-    print(f"  LOCAL_PACE_VOTE_BIN_WIDTH: {LOCAL_PACE_VOTE_BIN_WIDTH}")
-    print(f"  LOCAL_PACE_COMPACTNESS_BIN_WIDTH: {LOCAL_PACE_COMPACTNESS_BIN_WIDTH}")
 
-    print("\n[1/7] Building chain observables...")
+    print("\n[1/6] Building chain observables...")
 
     obs = build_multi_chain_observables(
         CHAINS,
@@ -340,7 +244,7 @@ def main() -> None:
     validate_observables(obs)
     print_parse_warnings(obs)
 
-    print("\n[2/7] Computing TV diagnostics...")
+    print("\n[2/6] Computing TV diagnostics...")
 
     vote_tv = get_tv_convergence(
         obs.vote_runs,
@@ -357,7 +261,7 @@ def main() -> None:
     print("  Vote final TV:", vote_tv.max_tvs[-1])
     print("  Compactness final TV:", compactness_tv.max_tvs[-1])
 
-    print("\n[3/7] Computing R-hat diagnostics...")
+    print("\n[3/6] Computing R-hat diagnostics...")
 
     vote_rhat = summarize_gelman_rubin_by_rank(
         obs.vote_runs,
@@ -378,46 +282,19 @@ def main() -> None:
         compactness_rhat.max_rank_normalized_split_r_hat,
     )
 
-    print("\n[4/7] Computing quick local PACE diagnostic...")
+    print("\n[4/6] Writing cache...")
 
-    pace_labels, pace_chain_ids, pace_cell_map = build_quick_local_pace_labels(obs)
-
-    print("  Local PACE sample count:", len(pace_labels))
-    print("  Local PACE number of cells:", len(pace_cell_map))
-
-    pace_result = pace_from_labels(
-        pace_labels,
-        pace_chain_ids,
-        threshold=0.1,
-        apply_correction=True,
-        n_bootstrap=0,
-    )
-
-    print("  Local PACE delta:", pace_result.delta)
-    print("  Local PACE raw delta:", pace_result.raw_delta)
-    print("  Local PACE correction factor:", pace_result.correction_factor)
-    print("  Local PACE converged:", pace_result.converged)
-    print("  Local PACE n_cells:", pace_result.n_cells)
-
-    assert pace_result is not None, "PACE returned None"
-    assert np.isfinite(pace_result.delta), "PACE delta is non-finite"
-
-    write_pace_json(pace_result)
-
-    print("\n[5/7] Writing cache...")
-
-    manifest = write_cache_with_optional_pace(
+    manifest = write_cache(
         obs=obs,
         vote_tv=vote_tv,
         compactness_tv=compactness_tv,
         vote_rhat=vote_rhat,
         compactness_rhat=compactness_rhat,
-        pace_result=pace_result,
     )
 
     print("  Manifest:", safe_to_dict(manifest))
 
-    print("\n[6/7] Writing plots...")
+    print("\n[5/6] Writing plots...")
 
     fig, ax = plot_vote_share_marginals(
         obs.vote_runs,
@@ -481,30 +358,22 @@ def main() -> None:
 
     print("  Wrote figures to:", FIGURE_DIR)
 
-    print("\n[7/7] Writing markdown report...")
+    print("\n[6/6] Writing markdown report...")
 
     write_diagnostic_report(
         REPORT_PATH,
-        title="Ohio congressional Atlas post-hoc diagnostics: run13-run16",
+        title="Ohio congressional Atlas post-hoc diagnostics: run37-run40",
         chain_summaries=obs.summaries(),
         vote_tv=vote_tv,
         compactness_tv=compactness_tv,
         vote_rhat=vote_rhat,
         compactness_rhat=compactness_rhat,
-        pace_result=pace_result,
         notes=(
             "This smoke test was generated from four AtlasIO chains. "
             "Vote-share vectors are sorted from most Republican to least Republican. "
             "Compactness vectors are sorted from most compact / lowest score to "
             "least compact / highest score. TV and R-hat diagnostics are computed "
             "rank-wise on these ordered observables. "
-            "PACE was computed only on a tiny coarse-binned local subset, with "
-            f"LOCAL_PACE_N={LOCAL_PACE_N}, "
-            f"LOCAL_PACE_STRIDE={LOCAL_PACE_STRIDE}, "
-            f"vote_bin_width={LOCAL_PACE_VOTE_BIN_WIDTH}, and "
-            f"compactness_bin_width={LOCAL_PACE_COMPACTNESS_BIN_WIDTH}. "
-            "This local PACE result is only an API smoke test and should not be "
-            "interpreted as a full-chain diagnostic."
         ),
     )
 
@@ -518,7 +387,6 @@ def main() -> None:
         OUTPUT_DIR / "diagnostics" / "compactness_tv.json",
         OUTPUT_DIR / "diagnostics" / "vote_rhat.json",
         OUTPUT_DIR / "diagnostics" / "compactness_rhat.json",
-        PACE_JSON_PATH,
         FIGURE_DIR / "oh_vote_share_marginals.png",
         FIGURE_DIR / "oh_vote_share_boxplots.png",
         FIGURE_DIR / "oh_compactness_marginals.png",
