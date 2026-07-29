@@ -70,6 +70,42 @@ cd atlas-posthoc
 uv pip install -e .
 ```
 
+### Paper mode
+
+Paper mode applies the manuscript figure conventions used by
+`atlas-posthoc-plus`. It removes axes and figure titles, uses
+Helvetica-compatible typography with STIX mathematical glyphs, embeds TrueType
+text, writes vector PDF output, and labels side-by-side two- and four-panel
+figures.
+
+Enable it for an existing script without changing that script:
+
+```bash
+ATLAS_POSTHOC_PAPER_MODE=1 python3 your_analysis.py
+```
+
+Calls that request `figure.png` (or another non-PDF suffix) write `figure.pdf`
+while the mode is active. Axis labels, legends, tick labels, and annotations
+remain intact. With paper mode unset, all plotting APIs retain their existing
+behavior and output paths.
+
+For programmatic use:
+
+```python
+from atlas_posthoc.paper import paper_mode
+
+with paper_mode():
+    plot_vote_share_marginals(runs, output_path="figures/votes.png")
+    # Writes figures/votes.pdf.
+```
+
+A self-contained example using synthetic municipal-split traces is available at
+[`examples/paper_mode.py`](examples/paper_mode.py):
+
+```bash
+python3 examples/paper_mode.py
+```
+
 ### Expected outputs
 ```
 outputs/congressional/

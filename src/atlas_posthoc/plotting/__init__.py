@@ -1,3 +1,12 @@
+from atlas_posthoc.paper import (
+    PANEL_LABEL_GID,
+    PAPER_MODE_ENV,
+    apply_paper_style,
+    paper_mode,
+    paper_mode_enabled,
+    paper_output_path,
+)
+
 from atlas_posthoc.plotting.style import (
     MANUSCRIPT_STYLE,
     NOTEBOOK_STYLE,
@@ -70,6 +79,14 @@ from atlas_posthoc.plotting.municipal_splits import (
 )
 
 __all__ = [
+    # paper mode
+    "PANEL_LABEL_GID",
+    "PAPER_MODE_ENV",
+    "apply_paper_style",
+    "paper_mode",
+    "paper_mode_enabled",
+    "paper_output_path",
+
     # style
     "MANUSCRIPT_STYLE",
     "NOTEBOOK_STYLE",

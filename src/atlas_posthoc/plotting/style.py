@@ -7,6 +7,11 @@ from typing import Any, Iterator, Literal
 
 import matplotlib.pyplot as plt
 
+from atlas_posthoc.paper import (
+    apply_paper_style,
+    save_figure as _save_paper_aware_figure,
+)
+
 
 PlotStyleName = Literal["manuscript", "presentation", "notebook"]
 
@@ -152,6 +157,8 @@ def plot_style(style: PlotStyleName | PlotStyle = "manuscript") -> Iterator[Plot
     s = get_plot_style(style)
 
     with plt.rc_context(rc_params_for_style(s)):
+        # This also supports enabling paper mode after atlas_posthoc was imported.
+        apply_paper_style()
         yield s
 
 
@@ -176,10 +183,9 @@ def save_figure(
     """
     Save a matplotlib figure with consistent defaults.
     """
-    p = ensure_parent_dir(path)
-
-    fig.savefig(
-        p,
+    p = _save_paper_aware_figure(
+        fig,
+        path,
         dpi=dpi,
         bbox_inches=bbox_inches,
         pad_inches=pad_inches,
