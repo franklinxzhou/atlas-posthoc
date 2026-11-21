@@ -1,13 +1,16 @@
+import gzip
 import json
 
 import numpy as np
 import pytest
 
+from atlas_posthoc.cli import main
 from atlas_posthoc.diagnostics.rhat import summarize_gelman_rubin_by_rank
 from atlas_posthoc.diagnostics.total_variation import (
     get_tv_convergence,
     make_vote_share_bins,
 )
+from atlas_posthoc.io.cache import read_chain_metadata
 from atlas_posthoc.pipeline.chain_observables import (
     ChainObservableError,
     build_chain_observables,
@@ -99,6 +102,94 @@ def atlas_record(name, d0, d1, d2, d3, compactness):
             {'["CINCINNATI 01_HAMILTON"]': d3},
         ],
     }
+
+
+def test_convergence_cli_runs_from_project_toml(tmp_path, monkeypatch, capsys):
+    project = tmp_path / "project"
+    project.mkdir()
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+    monkeypatch.chdir(tmp_path)
+    write_tiny_graph(project / "graph.json")
+    for index, chain in enumerate(("first", "second")):
+        chain_path = project / f"{chain}.jsonl"
+        records = []
+        for draw, letter in enumerate("abcdefgh"):
+            left = 1 + (draw // 2 + index) % 2
+            records.append(
+                atlas_record(f"map-{letter}", 1, left, 2, 3 - left, [10 + draw, 20 + index])
+            )
+        write_tiny_atlas(chain_path, records)
+    second = project / "second.jsonl"
+    (project / "second.jsonl.gz").write_bytes(gzip.compress(second.read_bytes()))
+
+    config_path = config_dir / "analysis.toml"
+    config_path.write_text(
+        """\
+[project]
+root = "../project"
+
+[chains]
+files = ["first.jsonl", "second.jsonl.gz"]
+ids = ["chain-a", "chain-b"]
+
+[inputs]
+graph_json = "graph.json"
+
+[columns]
+key_cols = ["NAME"]
+dem_col = "G20PREDEM"
+rep_col = "G20PREREP"
+
+[analysis]
+output_frequency = 10
+thin_step = 2
+
+[outputs]
+root = "results"
+
+[figures]
+paper_mode = true
+
+[workflow.convergence]
+report_title = "Synthetic convergence diagnostics"
+figure_prefix = "test_"
+""",
+        encoding="utf-8",
+    )
+    args = ["--config", "configs/analysis.toml"]
+    assert main([*args, "doctor", "convergence"]) == 0
+    assert main([*args, "run", "convergence", "--dry-run"]) == 0
+    assert "Figure format: PDF" in capsys.readouterr().out
+    assert main([*args, "--no-paper-mode", "run", "--dry-run"]) == 0
+    assert "Figure format: PNG" in capsys.readouterr().out
+    output = project / "results"
+    assert not output.exists()
+
+    assert main([*args, "run", "convergence"]) == 0
+    figures = sorted((output / "figures").iterdir())
+    assert len(figures) == 8
+    assert all(
+        path.name.startswith("test_") and path.read_bytes().startswith(b"%PDF")
+        for path in figures
+    )
+    report = (output / "diagnostic_report.md").read_text()
+    assert report.startswith("# Synthetic convergence diagnostics\n")
+    manifest = json.loads((output / "manifest.json").read_text())
+    assert all((output / path).is_file() for path in manifest["files"].values())
+    tv = json.loads((output / "diagnostics" / "vote_tv.json").read_text())
+    assert tv["proposals"] == [80]
+    metadata = read_chain_metadata(output / "cache" / "chain_metadata.parquet")
+    assert metadata.get_column("step").to_list() == [0, 20, 40, 60] * 2
+
+
+def test_cli_init_and_doctor(tmp_path, capsys):
+    config_path = tmp_path / "analysis.toml"
+    assert main(["init", str(config_path)]) == 0
+    assert main(["init", str(config_path)]) == 2
+    assert "refusing to overwrite" in capsys.readouterr().err
+    assert main(["--config", str(config_path), "doctor"]) == 2
+    assert str(tmp_path / "inputs" / "graph.json") in capsys.readouterr().err
 
 
 def test_build_chain_observables(tmp_path):
