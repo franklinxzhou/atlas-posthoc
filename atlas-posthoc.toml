@@ -1,0 +1,42 @@
+[project]
+# Point this at the checkout with the graph and sampler outputs.
+# Relative paths below are resolved against this root.
+root = "../oh-gerrymandering"
+
+[chains]
+files = [
+  "outputs/chains/soft_constraint/congressional/run37_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+  "outputs/chains/soft_constraint/congressional/run38_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+  "outputs/chains/soft_constraint/congressional/run39_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+  "outputs/chains/soft_constraint/congressional/run40_cntyw20.0_mcdw20.0_isoWeight0.25.jsonl",
+]
+ids = ["run37", "run38", "run39", "run40"]
+
+[analysis]
+n_districts = 15
+# Proposal interval used by the original convergence smoke script.
+output_frequency = 10000
+thin_step = 1
+compute_compactness = true
+
+[inputs]
+graph_json = "data/graph/OHpct20.json"
+
+[columns]
+key_cols = ["NAME"]
+dem_col = "G20PREDEM"
+rep_col = "G20PREREP"
+
+[outputs]
+root = "../atlas-posthoc/outputs/congressional"
+
+[figures]
+paper_mode = false
+
+[workflow.convergence]
+vote_bin_width = 0.002
+compactness_bin_width = 0.5
+vote_y_limits = [0.20, 0.82]
+compactness_y_limits = [15, 55]
+figure_prefix = "oh_"
+report_title = "Ohio congressional Atlas post-hoc diagnostics (runs 37–40)"

@@ -70,6 +70,42 @@ cd atlas-posthoc
 uv pip install -e .
 ```
 
+### Run convergence diagnostics from TOML
+
+```bash
+atlas-posthoc init analysis.toml
+```
+
+Edit the generated file with your graph, chains, and election columns. The CLI
+defaults to `atlas-posthoc.toml`. The checked-in configuration uses Ohio
+congressional runs 37–40 and assumes a sibling `oh-gerrymandering` checkout, as
+does the configuration in `atlas-posthoc-plus`.
+
+```bash
+atlas-posthoc list
+atlas-posthoc --config analysis.toml doctor convergence
+atlas-posthoc --config analysis.toml run convergence --dry-run
+atlas-posthoc --config analysis.toml run convergence
+```
+
+`run` defaults to `convergence`. It processes the saved maps in each chain once
+and produces ordered vote-share and compactness summaries, total-variation and R-hat diagnostics,
+figures, a Markdown report, and a cache manifest. Supply at least two distinct
+chains, each with at least four valid maps after thinning for split R-hat.
+
+Relative `project.root` is resolved from the TOML file's directory. All other
+relative paths are resolved from the project root.
+
+- `[chains]` supplies AtlasIO files (`.jsonl` or `.jsonl.gz`) and optional chain IDs.
+- `[inputs]` supplies `graph_json`.
+- `[columns]` supplies `dem_col`, `rep_col`, and optional assignment `key_cols`.
+- `[analysis]` sets the district count, saved-map proposal interval, and thinning.
+  Set `compute_compactness = false` for vote-share-only diagnostics.
+- `[outputs]` sets the directory for results.
+- `[figures]` controls paper mode.
+- `[workflow.convergence]` sets TV bin widths and optional plot limits, figure
+  filename prefix, and report title.
+
 ### Paper mode
 
 Paper mode applies the manuscript figure conventions used by
@@ -78,7 +114,14 @@ Helvetica-compatible typography with STIX mathematical glyphs, embeds TrueType
 text, writes vector PDF output, and labels side-by-side two- and four-panel
 figures.
 
-Enable it for an existing script without changing that script:
+Set `paper_mode = true` under `[figures]` in the TOML file. For a single run,
+pass `--paper-mode` or `--no-paper-mode` before the `run` command.
+
+```bash
+atlas-posthoc --config analysis.toml --paper-mode run convergence
+```
+
+For an existing Python script, enable it with the environment variable:
 
 ```bash
 ATLAS_POSTHOC_PAPER_MODE=1 python3 your_analysis.py
@@ -107,6 +150,10 @@ python3 examples/paper_mode.py
 ```
 
 ### Expected outputs
+
+The checked-in Ohio configuration adds `oh_` to each figure filename. Paper mode
+writes `.pdf` figures.
+
 ```
 outputs/congressional/
 ├── cache/
@@ -118,12 +165,13 @@ outputs/congressional/
 │   ├── vote_tv.json
 │   ├── compactness_tv.json
 │   ├── vote_rhat.json
-│   └── compactness_rhat.json
+│   ├── compactness_rhat.json
+│   └── extra.json
 ├── figures/
-│   ├── ordered_vote_share_marginals.png
-│   ├── ordered_compactness_marginals.png
-│   ├── ordered_vote_share_boxplots.png
-│   ├── ordered_compactness_boxplots.png
+│   ├── vote_share_marginals.png
+│   ├── compactness_marginals.png
+│   ├── vote_share_boxplots.png
+│   ├── compactness_boxplots.png
 │   ├── vote_share_tv_convergence.png
 │   ├── compactness_tv_convergence.png
 │   ├── vote_share_rhat.png
