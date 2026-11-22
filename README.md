@@ -70,6 +70,16 @@ cd atlas-posthoc
 uv pip install -e .
 ```
 
+### Run the tests
+
+The test suite generates small synthetic AtlasIO inputs locally. A standard Git
+checkout is enough to run it.
+
+```bash
+python -m pip install -e '.[dev]'
+python -m pytest
+```
+
 ### Run convergence diagnostics from TOML
 
 ```bash
