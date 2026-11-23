@@ -28,6 +28,7 @@ def apply_paper_style() -> None:
         {
             "font.family": "sans-serif",
             "font.sans-serif": [
+                "Nimbus Sans",
                 "Helvetica Neue",
                 "Helvetica",
                 "Arial",

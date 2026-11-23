@@ -49,7 +49,7 @@ def test_paper_mode_saves_pdf_without_titles_and_adds_panel_labels(
         assert figure._suptitle.get_text() == ""
         assert [axis.get_title() for axis in axes] == ["", ""]
         assert _panel_labels(figure) == ["(a)", "(b)"]
-        assert mpl.rcParams["font.sans-serif"][0] == "Helvetica Neue"
+        assert mpl.rcParams["font.sans-serif"][0] == "Nimbus Sans"
         plt.close(figure)
 
     assert not paper_mode_enabled()
