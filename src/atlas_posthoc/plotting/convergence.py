@@ -260,6 +260,7 @@ def plot_tv_convergence(
         xlabel=xlabel,
         ylabel=ylabel,
     )
+    ax.grid(False, which="both")
     despine(ax)
     ax.legend(loc="best", frameon=True, fancybox=False)
 
@@ -407,6 +408,7 @@ def plot_rankwise_rhat(
         xlabel=xlabel,
         ylabel=ylabel,
     )
+    ax.grid(False, which="both")
     despine(ax)
     ax.legend(loc="best", frameon=True, fancybox=False)
 

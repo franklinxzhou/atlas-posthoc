@@ -126,7 +126,7 @@ def _plot_trace_lines(
             alpha=alpha,
         )
 
-    ax.grid(True, alpha=0.25)
+    ax.grid(False, which="both")
 
     if show_legend:
         ax.legend(frameon=True, fancybox=False)
@@ -357,7 +357,7 @@ def _boxplot_by_chain(
         patch.set_facecolor(colors[idx])
         patch.set_alpha(0.60)
 
-    ax.grid(True, axis="y", alpha=0.25)
+    ax.grid(False, which="both")
     apply_axis_labels(ax, title=title, xlabel="Chain", ylabel=ylabel)
     despine(ax)
 
@@ -484,7 +484,7 @@ def plot_municipal_split_scatter(
     if ousted_scale == "share":
         format_percent_axis(ax, axis="y")
 
-    ax.grid(True, alpha=0.25)
+    ax.grid(False, which="both")
 
     if show_legend:
         ax.legend(frameon=True, fancybox=False)

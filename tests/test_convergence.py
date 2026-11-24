@@ -57,14 +57,21 @@ def test_plot_compactness_tv_convergence(tmp_path):
     }
 
     out = tmp_path / "compactness_tv.png"
+    fig, ax = plt.subplots()
+    ax.minorticks_on()
+    ax.grid(True, which="both")
 
-    fig, ax, fit = plot_compactness_tv_convergence(
+    _, _, fit = plot_compactness_tv_convergence(
         tv,
+        ax=ax,
         output_path=out,
     )
 
     assert out.exists()
     assert fit is not None
+    for axis in (ax.xaxis, ax.yaxis):
+        for tick in axis.get_major_ticks() + axis.get_minor_ticks():
+            assert not tick.gridline.get_visible()
     plt.close(fig)
 
 

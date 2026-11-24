@@ -28,7 +28,7 @@ def test_paper_mode_saves_pdf_without_titles_and_adds_panel_labels(
 ) -> None:
     monkeypatch.delenv(PAPER_MODE_ENV, raising=False)
 
-    with paper_mode():
+    with mpl.rc_context({"axes.grid": True}), paper_mode():
         figure, axes = plt.subplots(1, 2)
         figure.suptitle("Figure title")
         axes[0].set_title("Left title")
@@ -50,6 +50,7 @@ def test_paper_mode_saves_pdf_without_titles_and_adds_panel_labels(
         assert [axis.get_title() for axis in axes] == ["", ""]
         assert _panel_labels(figure) == ["(a)", "(b)"]
         assert mpl.rcParams["font.sans-serif"][0] == "Nimbus Sans"
+        assert not mpl.rcParams["axes.grid"]
         plt.close(figure)
 
     assert not paper_mode_enabled()

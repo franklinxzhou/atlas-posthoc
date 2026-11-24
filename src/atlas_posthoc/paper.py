@@ -40,6 +40,7 @@ def apply_paper_style() -> None:
             "legend.fontsize": 9,
             "xtick.labelsize": 8,
             "ytick.labelsize": 8,
+            "axes.grid": False,
             "axes.linewidth": 0.8,
             "xtick.direction": "out",
             "ytick.direction": "out",

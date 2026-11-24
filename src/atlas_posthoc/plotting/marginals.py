@@ -454,6 +454,7 @@ def plot_ordered_marginals_by_chain(
         format_percent_axis(ax, axis="y")
 
     apply_axis_labels(ax, title=title, xlabel=xlabel, ylabel=ylabel)
+    ax.grid(False, which="both")
     despine(ax)
 
     if output_path is not None:
@@ -503,6 +504,7 @@ def _apply_ordered_marginal_axes(
         format_percent_axis(ax, axis="y")
 
     apply_axis_labels(ax, title=title, xlabel=xlabel, ylabel=ylabel)
+    ax.grid(False, which="both")
     despine(ax)
 
 def plot_ordered_boxplots_by_chain(
