@@ -273,6 +273,7 @@ def plot_reference_plan_map(
             linewidth=boundary_linewidth,
         )
 
+    ax.grid(False, which="both")
     ax.set_axis_off()
     apply_axis_labels(ax, title=title)
 

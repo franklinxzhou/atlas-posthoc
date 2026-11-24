@@ -95,7 +95,7 @@ def _plot_single_trace_kind(
         )
 
     ax.set_ylim(0.0, 1.0)
-    ax.grid(True, alpha=0.25)
+    ax.grid(False, which="both")
 
     if show_legend:
         ax.legend(frameon=True, fancybox=False)

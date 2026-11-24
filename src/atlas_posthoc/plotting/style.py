@@ -132,7 +132,7 @@ def rc_params_for_style(style: PlotStyleName | PlotStyle = "manuscript") -> dict
         "legend.fontsize": s.legend_size,
         "lines.linewidth": s.line_width,
         "lines.markersize": s.marker_size,
-        "axes.grid": True,
+        "axes.grid": False,
         "grid.alpha": s.grid_alpha,
         "grid.linewidth": 0.6,
         "axes.spines.top": False,

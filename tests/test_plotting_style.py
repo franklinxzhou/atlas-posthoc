@@ -29,12 +29,15 @@ def test_chain_color_cycle_has_multiple_colors():
     assert colors[0] == "C0"
 
 
-def test_plot_style_context_and_save(tmp_path):
+@pytest.mark.parametrize("style_name", ["manuscript", "presentation", "notebook"])
+def test_plot_style_context_and_save(tmp_path, style_name):
     out = tmp_path / "figures" / "test.png"
 
-    with plot_style("manuscript") as style:
+    with plt.rc_context({"axes.grid": True}), plot_style(style_name) as style:
         fig, ax = plt.subplots(figsize=style.figsize_single)
         ax.plot([0, 1], [0, 1])
+        gridlines = ax.get_xgridlines() + ax.get_ygridlines()
+        assert not any(line.get_visible() for line in gridlines)
         saved = save_figure(fig, out)
 
     assert saved.exists()
